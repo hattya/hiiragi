@@ -28,6 +28,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -57,6 +59,7 @@ func init() {
 	app.Usage = "[options] PATH"
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
 	app.Flags.String("c, cache", "hiiragi.db", "cache file (default: %q)")
+	app.Flags.Bool("p, pretend", false, "show what will be done")
 	app.Action = cli.Simple(dedup)
 	app.Stdout = colorable.NewColorable(os.Stdout)
 	app.Stderr = colorable.NewColorable(os.Stderr)
@@ -91,6 +94,34 @@ func dedup(ctx *cli.Context) error {
 	}
 	f.Close()
 
+	if ctx.Bool("pretend") {
+		// close master
+		if err := db.Close(); err != nil {
+			return err
+		}
+		// copy master → temporary
+		f, err := os.Open(ctx.String("cache"))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		t, err := ioutil.TempFile("", "hiiragi")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(t.Name())
+		if _, err := io.Copy(t, f); err != nil {
+			return err
+		}
+		// dedup with temprary
+		db, err = hiiragi.Open(t.Name())
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+	}
+
 	d := hiiragi.NewDeduper(ctx.UI, db)
+	d.Pretend = ctx.Bool("pretend")
 	return d.Files()
 }

@@ -37,6 +37,8 @@ import (
 const Version = "0.0+"
 
 type Deduper struct {
+	Pretend bool
+
 	ui  *cli.CLI
 	db  *DB
 	p   *counter
@@ -139,23 +141,26 @@ func (d *Deduper) link(src, dst string) (err error) {
 	}
 	d.ui.Println(" +", dst)
 
-	var tmp string
-	for {
-		d.i++
-		tmp = fmt.Sprintf("%v.%v_%v", dst, d.pid, d.i)
-		if !exists(tmp) {
-			break
+	if !d.Pretend {
+		var tmp string
+		for {
+			d.i++
+			tmp = fmt.Sprintf("%v.%v_%v", dst, d.pid, d.i)
+			if !exists(tmp) {
+				break
+			}
 		}
-	}
-	defer os.Rename(tmp, dst)
+		defer os.Rename(tmp, dst)
 
-	if err = os.Rename(dst, tmp); err != nil {
-		return
+		if err = os.Rename(dst, tmp); err != nil {
+			return
+		}
+		if err = os.Link(src, dst); err != nil {
+			return
+		}
+		err = os.Remove(tmp)
 	}
-	if err = os.Link(src, dst); err != nil {
-		return
-	}
-	return os.Remove(tmp)
+	return
 }
 
 func (d *Deduper) skip(name string) error {
