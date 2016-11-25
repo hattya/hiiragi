@@ -60,6 +60,7 @@ func init() {
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
 	app.Flags.String("c, cache", "hiiragi.db", "cache file (default: %q)")
 	app.Flags.Bool("p, pretend", false, "show what will be done")
+	app.Flags.Bool("r, resume", false, "resume dedup with the specified cache file")
 	app.Action = cli.Simple(dedup)
 	app.Stdout = colorable.NewColorable(os.Stdout)
 	app.Stderr = colorable.NewColorable(os.Stderr)
@@ -75,24 +76,31 @@ func dedup(ctx *cli.Context) error {
 	}()
 
 	c := ctx.String("cache")
-	if _, err := os.Lstat(c); err == nil {
-		return fmt.Errorf("'%v' already exists!", c)
+	open := hiiragi.Create
+	if ctx.Bool("resume") {
+		open = hiiragi.Open
+	} else {
+		if _, err := os.Lstat(c); err == nil {
+			return fmt.Errorf("'%v' already exists!", c)
+		}
 	}
-	db, err := hiiragi.Create(c)
+	db, err := open(c)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	f := hiiragi.NewFinder(ctx.UI, db)
-	for _, p := range ctx.Args {
-		p, err := filepath.Abs(p)
-		if err != nil {
-			return err
+	if !ctx.Bool("resume") {
+		f := hiiragi.NewFinder(ctx.UI, db)
+		for _, p := range ctx.Args {
+			p, err := filepath.Abs(p)
+			if err != nil {
+				return err
+			}
+			f.Walk(p)
 		}
-		f.Walk(p)
+		f.Close()
 	}
-	f.Close()
 
 	if ctx.Bool("pretend") {
 		// close master
