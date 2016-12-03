@@ -139,6 +139,38 @@ func TestDedupFiles(t *testing.T) {
 	}
 }
 
+func TestDedupFilesIgnoreName(t *testing.T) {
+	dir, files, err := dedup("files", map[string]interface{}{
+		"name": false,
+	})
+	defer os.RemoveAll(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !sameFile(files[0], files[1]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[0], files[2]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[0], files[4]) {
+		t.Errorf("files should be different")
+	}
+	if sameFile(files[0], files[6]) {
+		t.Errorf("files should be different")
+	}
+	if !sameFile(files[1], files[3]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[1], files[5]) {
+		t.Errorf("files should be different")
+	}
+	if sameFile(files[1], files[7]) {
+		t.Errorf("files should be different")
+	}
+}
+
 func TestDedupFilesPretend(t *testing.T) {
 	dir, files, err := dedup("files", map[string]interface{}{
 		"pretend": true,
@@ -203,6 +235,9 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	}
 
 	d := hiiragi.NewDeduper(ui, db)
+	if v, ok := opts["name"]; ok {
+		d.Name = v.(bool)
+	}
 	if v, ok := opts["pretend"]; ok {
 		d.Pretend = v.(bool)
 	}

@@ -59,6 +59,7 @@ func init() {
 	app.Usage = "[options] PATH"
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
 	app.Flags.String("c, cache", "hiiragi.db", "cache file (default: %q)")
+	app.Flags.Bool("n, name", false, "ignore file name")
 	app.Flags.Bool("p, pretend", false, "show what will be done")
 	app.Flags.Bool("r, resume", false, "resume dedup with the specified cache file")
 	app.Action = cli.Simple(dedup)
@@ -130,6 +131,7 @@ func dedup(ctx *cli.Context) error {
 	}
 
 	d := hiiragi.NewDeduper(ctx.UI, db)
+	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")
 	return d.Files()
 }

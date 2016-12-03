@@ -37,6 +37,7 @@ import (
 const Version = "0.0+"
 
 type Deduper struct {
+	Name    bool
 	Pretend bool
 
 	ui  *cli.CLI
@@ -48,9 +49,10 @@ type Deduper struct {
 
 func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 	return &Deduper{
-		ui:  ui,
-		db:  db,
-		p:   newCounter(ui, "dedup"),
+		Name: true,
+		ui:   ui,
+		db:   db,
+		p:    newCounter(ui, "dedup"),
 		pid: os.Getpid(),
 	}
 }
@@ -115,10 +117,12 @@ func (d *Deduper) files() error {
 
 func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err error) {
 	var src FileInfoEx
-	sort.Stable(FileInfoExSlice(list))
+	if d.Name {
+		sort.Stable(FileInfoExSlice(list))
+	}
 	for _, dst := range list {
 		switch {
-		case src == nil || src.Name() != dst.Name():
+		case src == nil || (d.Name && src.Name() != dst.Name()):
 			src = dst
 			d.i = 0
 		case SameFileEx(src, dst):
