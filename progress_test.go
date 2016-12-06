@@ -1,5 +1,5 @@
 //
-// hiiragi :: finder.go
+// hiiragi :: progress_test.go
 //
 //   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
 //
@@ -24,76 +24,54 @@
 //   SOFTWARE.
 //
 
-package hiiragi
+package hiiragi_test
 
 import (
-	"os"
-	"path/filepath"
-	"sync"
+	"bytes"
+	"strings"
+	"testing"
 
-	"github.com/hattya/go.cli"
+	cli "github.com/hattya/go.cli"
+	"github.com/hattya/hiiragi"
 )
 
-type Finder struct {
-	Progress bool
+func TestCounter(t *testing.T) {
+	var b bytes.Buffer
+	ui := cli.NewCLI()
+	ui.Stdout = &b
+	ui.Stderr = &b
 
-	ui *cli.CLI
-	db *DB
-	c  chan FileInfoEx
-	wg sync.WaitGroup
-	mu sync.Mutex
-	p  *counter
-}
-
-func NewFinder(ui *cli.CLI, db *DB) *Finder {
-	f := &Finder{
-		Progress: true,
-		ui:       ui,
-		db:       db,
-		c:        make(chan FileInfoEx),
-		p:        newCounter(ui, "scan"),
+	b.Reset()
+	c := hiiragi.NewCounter(ui, "test")
+	c.N = 8
+	for i := int64(0); i < c.N; i++ {
+		c.Update(1)
 	}
-	go f.update()
-	return f
-}
-
-func (f *Finder) update() {
-	f.wg.Add(1)
-	for fi := range f.c {
-		f.mu.Lock()
-		f.p.Update(1)
-		if err := f.db.Update(fi); err != nil {
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
-		}
-		f.mu.Unlock()
+	c.Close()
+	if !strings.Contains(b.String(), "\x1b") {
+		t.Errorf("expected ANSI escape sequence to be found")
 	}
-	f.wg.Done()
-}
 
-func (f *Finder) Close() {
-	close(f.c)
-	f.wg.Wait()
+	b.Reset()
+	c = hiiragi.NewCounter(ui, "test")
+	c.N = 8
+	c.Show = false
+	for i := int64(0); i < c.N; i++ {
+		c.Update(1)
+	}
+	c.Close()
+	if g, e := b.String(), "test: 8 / 8\n"; g != e {
+		t.Errorf("expected %q, got %q", e, g)
+	}
 
-	f.p.Update(0)
-	f.p.Close()
-}
-
-func (f *Finder) Walk(root string) {
-	f.p.Show = f.Progress
-	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
-		switch {
-		case err != nil:
-			f.mu.Lock()
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
-			f.mu.Unlock()
-		case fi.Mode()&os.ModeType == 0:
-			f.c <- &fileStatEx{
-				FileInfo: fi,
-				path:     path,
-			}
-		}
-		return nil
-	})
+	b.Reset()
+	c = hiiragi.NewCounter(ui, "test")
+	c.Show = false
+	for i := 0; i < 8; i++ {
+		c.Update(1)
+	}
+	c.Close()
+	if g, e := b.String(), "test: 8\n"; g != e {
+		t.Errorf("expected %q, got %q", e, g)
+	}
 }

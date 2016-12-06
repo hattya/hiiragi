@@ -35,6 +35,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/hattya/go.cli"
 	"github.com/hattya/hiiragi"
 	"github.com/mattn/go-colorable"
@@ -68,11 +70,18 @@ func init() {
 }
 
 func dedup(ctx *cli.Context) error {
+	progress := false
+	if f, ok := ctx.UI.Stdout.(*os.File); ok {
+		progress = terminal.IsTerminal(int(f.Fd()))
+	}
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	go func() {
 		<-sig
-		ctx.UI.Printf("\x1b[?25h")
+		if progress {
+			ctx.UI.Printf("\x1b[?25h")
+		}
 		os.Exit(128 + 2)
 	}()
 
@@ -93,6 +102,7 @@ func dedup(ctx *cli.Context) error {
 
 	if !ctx.Bool("resume") {
 		f := hiiragi.NewFinder(ctx.UI, db)
+		f.Progress = progress
 		for _, p := range ctx.Args {
 			p, err := filepath.Abs(p)
 			if err != nil {
@@ -133,5 +143,6 @@ func dedup(ctx *cli.Context) error {
 	d := hiiragi.NewDeduper(ctx.UI, db)
 	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")
+	d.Progress = progress
 	return d.Files()
 }

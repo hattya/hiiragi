@@ -33,7 +33,8 @@ import (
 )
 
 type counter struct {
-	N int64
+	N    int64
+	Show bool
 
 	ui    *cli.CLI
 	label string
@@ -45,6 +46,7 @@ type counter struct {
 
 func newCounter(ui *cli.CLI, label string) *counter {
 	return &counter{
+		Show:  true,
 		ui:    ui,
 		label: label,
 	}
@@ -54,7 +56,11 @@ func (c *counter) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.ui.Printf("\x1b[?25h")
+	if c.Show {
+		c.ui.Printf("\x1b[?25h")
+	} else {
+		c.render()
+	}
 	if !c.bol {
 		c.ui.Printf("\n")
 		c.bol = true
@@ -65,7 +71,9 @@ func (c *counter) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.ui.Printf("\x1b[1K\r")
+	if c.Show {
+		c.ui.Printf("\x1b[1K\r")
+	}
 	c.bol = true
 }
 
@@ -81,7 +89,13 @@ func (c *counter) Update(i int64) {
 	defer c.mu.Unlock()
 
 	c.pos += i
-	c.ui.Printf("\r\x1b[?25l")
+	if c.Show {
+		c.ui.Printf("\r\x1b[?25l")
+		c.render()
+	}
+}
+
+func (c *counter) render() {
 	if 0 < c.N {
 		c.ui.Printf("%s: %v / %v", c.label, c.pos, c.N)
 	} else {

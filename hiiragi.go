@@ -37,8 +37,9 @@ import (
 const Version = "0.0+"
 
 type Deduper struct {
-	Name    bool
-	Pretend bool
+	Name     bool
+	Pretend  bool
+	Progress bool
 
 	ui  *cli.CLI
 	db  *DB
@@ -49,11 +50,12 @@ type Deduper struct {
 
 func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 	return &Deduper{
-		Name: true,
-		ui:   ui,
-		db:   db,
-		p:    newCounter(ui, "dedup"),
-		pid: os.Getpid(),
+		Name:     true,
+		Progress: true,
+		ui:       ui,
+		db:       db,
+		p:        newCounter(ui, "dedup"),
+		pid:      os.Getpid(),
 	}
 }
 
@@ -66,6 +68,7 @@ func (d *Deduper) Files() error {
 	d.p.N = n
 	d.p.Set(done)
 
+	d.p.Show = d.Progress
 	defer d.p.Close()
 
 	return d.files()

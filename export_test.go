@@ -27,5 +27,6 @@
 package hiiragi
 
 var (
-	Sort = sortEntries
+	NewCounter = newCounter
+	Sort       = sortEntries
 )
