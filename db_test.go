@@ -98,7 +98,7 @@ func TestDBFiles(t *testing.T) {
 	}
 
 	test := func(db *hiiragi.DB, v int64) (err error) {
-		_, err = db.NextFiles()
+		_, err = db.NextFiles(true, hiiragi.Asc)
 		if err != nil {
 			return
 		}
@@ -233,7 +233,7 @@ func TestSortFiles(t *testing.T) {
 		},
 	}
 
-	hiiragi.Sort(files)
+	hiiragi.Sort(files, hiiragi.Asc)
 	for i, e := range []string{
 		filepath.Join(home, "1"),
 		filepath.Join(home, "2"),
@@ -242,6 +242,21 @@ func TestSortFiles(t *testing.T) {
 		filepath.Join(home, "a", "1"),
 		filepath.Join(home, "a", "2"),
 		filepath.Join(home, "b", "1"),
+	} {
+		if g := files[i].Path; g != e {
+			t.Errorf("expected files[%v] = %q, got %q", i, e, g)
+		}
+	}
+
+	hiiragi.Sort(files, hiiragi.Desc)
+	for i, e := range []string{
+		filepath.Join(home, "2"),
+		filepath.Join(home, "3"),
+		filepath.Join(home, "4"),
+		filepath.Join(home, "a", "1"),
+		filepath.Join(home, "a", "2"),
+		filepath.Join(home, "b", "1"),
+		filepath.Join(home, "1"),
 	} {
 		if g := files[i].Path; g != e {
 			t.Errorf("expected files[%v] = %q, got %q", i, e, g)

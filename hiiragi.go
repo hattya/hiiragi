@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/hattya/go.cli"
 )
@@ -37,6 +38,7 @@ import (
 const Version = "0.0+"
 
 type Deduper struct {
+	Mtime    When
 	Name     bool
 	Pretend  bool
 	Progress bool
@@ -75,8 +77,9 @@ func (d *Deduper) Files() error {
 }
 
 func (d *Deduper) files() error {
+	mtime, order := d.mtime()
 	for {
-		files, err := d.db.NextFiles()
+		files, err := d.db.NextFiles(mtime, order)
 		switch {
 		case err != nil || len(files) == 0:
 			return err
@@ -116,6 +119,15 @@ func (d *Deduper) files() error {
 			}
 		}
 	}
+}
+
+func (d *Deduper) mtime() (bool, Order) {
+	mtime := d.Mtime == 0
+	order := Asc
+	if d.Mtime == Latest {
+		order = Desc
+	}
+	return mtime, order
 }
 
 func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err error) {
@@ -177,3 +189,41 @@ func (d *Deduper) skip(name string) error {
 	d.p.Update(1)
 	return nil
 }
+
+type When uint
+
+const (
+	Oldest When = 1 + iota
+	Latest
+)
+
+func (w When) String() string {
+	switch w {
+	case 0:
+		return "None"
+	case Oldest:
+		return "Oldest"
+	case Latest:
+		return "Latest"
+	}
+	return fmt.Sprintf("When(%d)", w)
+}
+
+type WhenValue When
+
+func (w *WhenValue) Set(s string) error {
+	switch {
+	case len(s) < 1 || 6 < len(s):
+	case strings.HasPrefix("oldest", strings.ToLower(s)):
+		*w = WhenValue(Oldest)
+	case strings.HasPrefix("latest", strings.ToLower(s)):
+		*w = WhenValue(Latest)
+	}
+	if *w != 0 {
+		return nil
+	}
+	return fmt.Errorf("invalid value: %q", s)
+}
+
+func (w *WhenValue) Get() interface{} { return When(*w) }
+func (w *WhenValue) String() string   { return (*When)(w).String() }

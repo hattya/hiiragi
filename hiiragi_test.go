@@ -139,6 +139,71 @@ func TestDedupFiles(t *testing.T) {
 	}
 }
 
+func TestDedupFilesIgnoreAll(t *testing.T) {
+	dir, files, err := dedup("files", map[string]interface{}{
+		"mtime": hiiragi.Oldest,
+		"name":  false,
+	})
+	defer os.RemoveAll(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !sameFile(files[0], files[1]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[0], files[2]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[0], files[4]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[0], files[6]) {
+		t.Errorf("files should be different")
+	}
+	if !sameFile(files[1], files[3]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[1], files[5]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[1], files[7]) {
+		t.Errorf("files should be different")
+	}
+}
+
+func TestDedupFilesIgnoreMtime(t *testing.T) {
+	dir, files, err := dedup("files", map[string]interface{}{
+		"mtime": hiiragi.Oldest,
+	})
+	defer os.RemoveAll(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if sameFile(files[0], files[1]) {
+		t.Errorf("files should be different")
+	}
+	if !sameFile(files[0], files[2]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[0], files[4]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[0], files[6]) {
+		t.Errorf("files should be different")
+	}
+	if !sameFile(files[1], files[3]) {
+		t.Errorf("files should be same")
+	}
+	if !sameFile(files[1], files[5]) {
+		t.Errorf("files should be same")
+	}
+	if sameFile(files[1], files[7]) {
+		t.Errorf("files should be different")
+	}
+}
+
 func TestDedupFilesIgnoreName(t *testing.T) {
 	dir, files, err := dedup("files", map[string]interface{}{
 		"name": false,
@@ -235,6 +300,9 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	}
 
 	d := hiiragi.NewDeduper(ui, db)
+	if v, ok := opts["mtime"]; ok {
+		d.Mtime = v.(hiiragi.When)
+	}
 	if v, ok := opts["name"]; ok {
 		d.Name = v.(bool)
 	}
@@ -313,4 +381,55 @@ func sameFile(a, b string) bool {
 		return false
 	}
 	return os.SameFile(fi1, fi2)
+}
+
+var whenTests = []struct {
+	in  hiiragi.When
+	out string
+}{
+	{hiiragi.When(0), "None"},
+	{hiiragi.Oldest, "Oldest"},
+	{hiiragi.Latest, "Latest"},
+	{hiiragi.When(9), "When(9)"},
+}
+
+func TestWhen(t *testing.T) {
+	for _, tt := range whenTests {
+		if g, e := tt.in.String(), tt.out; g != e {
+			t.Errorf("expected %q, got %q", e, g)
+		}
+	}
+}
+
+var whenValueTests = []struct {
+	in  string
+	out hiiragi.When
+	err string
+}{
+	{"o", hiiragi.Oldest, ""},
+	{"old", hiiragi.Oldest, ""},
+	{"oldest", hiiragi.Oldest, ""},
+	{"l", hiiragi.Latest, ""},
+	{"late", hiiragi.Latest, ""},
+	{"latest", hiiragi.Latest, ""},
+	{"", 0, `invalid value: ""`},
+	{"123456", 0, `invalid value: "123456"`},
+	{"1234567", 0, `invalid value: "1234567"`},
+}
+
+func TestWhenValue(t *testing.T) {
+	for _, tt := range whenValueTests {
+		var v hiiragi.WhenValue
+		if err := v.Set(tt.in); err != nil {
+			if g, e := err.Error(), tt.err; g != e {
+				t.Error("unexpected error:", err)
+			}
+		}
+		if g, e := v.Get(), tt.out; g != e {
+			t.Errorf("expected %v, got %v", e, g)
+		}
+		if g, e := v.String(), tt.out.String(); g != e {
+			t.Errorf("expected %q, got %q", e, g)
+		}
+	}
 }

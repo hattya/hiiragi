@@ -78,12 +78,12 @@ func (db *DB) count(t string) (done, n int64, err error) {
 	return
 }
 
-func (db *DB) NextFiles() ([]*File, error) {
-	list, err := db.next(&File{})
+func (db *DB) NextFiles(mtime bool, order Order) ([]*File, error) {
+	list, err := db.next(&File{}, mtime, order)
 	return list.([]*File), err
 }
 
-func (db *DB) next(t interface{}) (list interface{}, err error) {
+func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, err error) {
 	tt := reflect.Indirect(reflect.ValueOf(t)).Type()
 	col := tt.Field(tt.NumField() - 1).Name
 	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
@@ -128,9 +128,15 @@ func (db *DB) next(t interface{}) (list interface{}, err error) {
 		         ON info_id = i.id
 		 WHERE dev     =  ?
 		   AND %[1]v   =  ?
-		   AND i.mtime =  ?
 		   AND done    IS NULL
 	`), strings.ToLower(col), strings.ToLower(tt.Name()))
+	if mtime {
+		b.WriteString(cli.Dedent(`
+		   AND i.mtime =  ?
+		`))
+	} else {
+		a = a[:2]
+	}
 	rows, err := db.db.Query(b.String(), a...)
 	if err != nil {
 		return
@@ -151,7 +157,7 @@ func (db *DB) next(t interface{}) (list interface{}, err error) {
 	}
 	list = lv.Interface()
 	err = rows.Err()
-	sortEntries(list)
+	sortEntries(list, order)
 	return
 }
 
@@ -286,10 +292,10 @@ type File struct {
 	Size  int64
 }
 
-func sortEntries(list interface{}) interface{} {
+func sortEntries(list interface{}, order Order) interface{} {
 	lv := reflect.ValueOf(list)
 	n := lv.Len()
-	s := make(entrySlice, n)
+	s := make([]*entry, n)
 	for i := 0; i < n; i++ {
 		v := lv.Index(i).Elem()
 		path := v.FieldByName("Path").Interface().(string)
@@ -302,7 +308,7 @@ func sortEntries(list interface{}) interface{} {
 			Data:  v.Addr(),
 		}
 	}
-	sort.Sort(s)
+	sort.Sort(entrySlice{s, order})
 	for i, e := range s {
 		lv.Index(i).Set(e.Data.(reflect.Value))
 	}
@@ -317,15 +323,21 @@ type entry struct {
 	Data  interface{}
 }
 
-type entrySlice []*entry
+type entrySlice struct {
+	s     []*entry
+	order Order
+}
 
-func (p entrySlice) Len() int      { return len(p) }
-func (p entrySlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p entrySlice) Len() int      { return len(p.s) }
+func (p entrySlice) Swap(i, j int) { p.s[i], p.s[j] = p.s[j], p.s[i] }
 
 func (p entrySlice) Less(i, j int) bool {
-	a := p[i]
-	b := p[j]
+	a := p.s[i]
+	b := p.s[j]
 	if !a.Mtime.Equal(b.Mtime) {
+		if p.order == Desc {
+			return a.Mtime.After(b.Mtime)
+		}
 		return a.Mtime.Before(b.Mtime)
 	}
 	if a.Nlink != b.Nlink {
@@ -350,6 +362,13 @@ func (p entrySlice) less(a, b []string) bool {
 		return false
 	}
 }
+
+type Order uint
+
+const (
+	Asc Order = iota
+	Desc
+)
 
 var (
 	pragma   map[string]string
