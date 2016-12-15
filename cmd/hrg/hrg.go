@@ -60,6 +60,7 @@ func init() {
 	app.Version = hiiragi.Version
 	app.Usage = "[options] PATH"
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
+	app.Flags.Bool("a, attrs", false, "ignore file attributes")
 	app.Flags.String("c, cache", "hiiragi.db", "cache file (default: %q)")
 	var w hiiragi.When
 	app.Flags.Var("m, mtime", (*hiiragi.WhenValue)(&w), `ignore mtime. <when> is either "oldest" or "latest"`)
@@ -144,6 +145,7 @@ func dedup(ctx *cli.Context) error {
 	}
 
 	d := hiiragi.NewDeduper(ctx.UI, db)
+	d.Attrs = !ctx.Bool("attrs")
 	d.Mtime = ctx.Value("mtime").(hiiragi.When)
 	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")

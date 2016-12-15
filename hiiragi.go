@@ -38,6 +38,7 @@ import (
 const Version = "0.0+"
 
 type Deduper struct {
+	Attrs    bool
 	Mtime    When
 	Name     bool
 	Pretend  bool
@@ -52,6 +53,7 @@ type Deduper struct {
 
 func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 	return &Deduper{
+		Attrs:    true,
 		Name:     true,
 		Progress: true,
 		ui:       ui,
@@ -140,7 +142,7 @@ func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err err
 		case src == nil || (d.Name && src.Name() != dst.Name()):
 			src = dst
 			d.i = 0
-		case SameFileEx(src, dst):
+		case !d.Attrs || SameFileEx(src, dst):
 			if err = d.link(src.Path(), dst.Path()); err != nil {
 				return
 			}
