@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/hattya/go.cli"
 )
@@ -210,22 +209,3 @@ func (w When) String() string {
 	}
 	return fmt.Sprintf("When(%d)", w)
 }
-
-type WhenValue When
-
-func (w *WhenValue) Set(s string) error {
-	switch {
-	case len(s) < 1 || 6 < len(s):
-	case strings.HasPrefix("oldest", strings.ToLower(s)):
-		*w = WhenValue(Oldest)
-	case strings.HasPrefix("latest", strings.ToLower(s)):
-		*w = WhenValue(Latest)
-	}
-	if *w != 0 {
-		return nil
-	}
-	return fmt.Errorf("invalid value: %q", s)
-}
-
-func (w *WhenValue) Get() interface{} { return When(*w) }
-func (w *WhenValue) String() string   { return (*When)(w).String() }

@@ -436,36 +436,3 @@ func TestWhen(t *testing.T) {
 		}
 	}
 }
-
-var whenValueTests = []struct {
-	in  string
-	out hiiragi.When
-	err string
-}{
-	{"o", hiiragi.Oldest, ""},
-	{"old", hiiragi.Oldest, ""},
-	{"oldest", hiiragi.Oldest, ""},
-	{"l", hiiragi.Latest, ""},
-	{"late", hiiragi.Latest, ""},
-	{"latest", hiiragi.Latest, ""},
-	{"", 0, `invalid value: ""`},
-	{"123456", 0, `invalid value: "123456"`},
-	{"1234567", 0, `invalid value: "1234567"`},
-}
-
-func TestWhenValue(t *testing.T) {
-	for _, tt := range whenValueTests {
-		var v hiiragi.WhenValue
-		if err := v.Set(tt.in); err != nil {
-			if g, e := err.Error(), tt.err; g != e {
-				t.Error("unexpected error:", err)
-			}
-		}
-		if g, e := v.Get(), tt.out; g != e {
-			t.Errorf("expected %v, got %v", e, g)
-		}
-		if g, e := v.String(), tt.out.String(); g != e {
-			t.Errorf("expected %q, got %q", e, g)
-		}
-	}
-}
