@@ -68,6 +68,10 @@ func (db *DB) NFile() (int64, int64, error) {
 	return db.count(`file`)
 }
 
+func (db *DB) NSymlink() (int64, int64, error) {
+	return db.count(`symlink`)
+}
+
 func (db *DB) count(t string) (done, n int64, err error) {
 	q := fmt.Sprintf(cli.Dedent(`
 		SELECT count(done),
@@ -81,6 +85,11 @@ func (db *DB) count(t string) (done, n int64, err error) {
 func (db *DB) NextFiles(mtime bool, order Order) ([]*File, error) {
 	list, err := db.next(&File{}, mtime, order)
 	return list.([]*File), err
+}
+
+func (db *DB) NextSymlinks(mtime bool, order Order) ([]*Symlink, error) {
+	list, err := db.next(&Symlink{}, mtime, order)
+	return list.([]*Symlink), err
 }
 
 func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, err error) {
@@ -168,7 +177,7 @@ func (db *DB) Done(path string) (err error) {
 	}
 	defer tx.Rollback()
 
-	for _, t := range []string{"file"} {
+	for _, t := range []string{"file", "symlink"} {
 		q := fmt.Sprintf(cli.Dedent(`
 			UPDATE %v
 			   SET done = datetime('now')
@@ -264,6 +273,27 @@ func (db *DB) Update(fi FileInfoEx) (err error) {
 			       )
 		`)
 		a[0] = fi.Size()
+	} else {
+		// symlink
+		i = cli.Dedent(`
+			INSERT INTO symlink (info_id, target)
+			  SELECT id, ?
+			    FROM info
+			   WHERE path = ?
+		`)
+		u = cli.Dedent(`
+			UPDATE symlink
+			   SET target = ?
+			 WHERE EXISTS (
+			         SELECT *
+			           FROM info AS i
+			          WHERE i.id   = info_id
+			            AND i.path = ?
+			       )
+		`)
+		if a[0], err = os.Readlink(fi.Path()); err != nil {
+			return
+		}
 	}
 	if err = db.upsert(tx, i, u, a...); err != nil {
 		return
@@ -290,6 +320,14 @@ type File struct {
 	Nlink uint64
 	Mtime time.Time
 	Size  int64
+}
+
+type Symlink struct {
+	Path   string
+	Dev    uint64
+	Nlink  uint64
+	Mtime  time.Time
+	Target string
 }
 
 func sortEntries(list interface{}, order Order) interface{} {
@@ -400,6 +438,12 @@ func init() {
 		"hash       TEXT",
 		"done       TIMESTAMP",
 	}
+	table["symlink"] = []string{
+		"id         INTEGER   NOT NULL PRIMARY KEY",
+		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
+		"target     TEXT      NOT NULL",
+		"done       TIMESTAMP",
+	}
 
 	// info
 	triggers = append(triggers, cli.Dedent(`
@@ -420,9 +464,27 @@ func init() {
 		                      ON i.id = f.info_id
 		              WHERE i.id = NEW.id
 		           );
+		    UPDATE symlink
+		       SET done = NULL
+		     WHERE EXISTS (
+		             SELECT *
+		               FROM info AS i
+		              INNER JOIN symlink AS s
+		                      ON i.id = s.info_id
+		              WHERE i.id = NEW.id
+		           );
 		  END
 	`))
 	// file
+	triggers = append(triggers, cli.Dedent(`
+		CREATE TRIGGER IF NOT EXISTS file_insert
+		  AFTER INSERT ON file
+		  FOR EACH ROW
+		  BEGIN
+		    DELETE FROM symlink
+			 WHERE info_id = NEW.info_id;
+		  END
+	`))
 	triggers = append(triggers, cli.Dedent(`
 		CREATE TRIGGER IF NOT EXISTS file_update
 		  AFTER UPDATE OF info_id, size ON file
@@ -440,6 +502,38 @@ func init() {
 		              WHERE i.id         = NEW.info_id
 		                AND i.updated_at > NEW.done
 		           );
+		    DELETE FROM symlink
+		     WHERE info_id = NEW.info_id;
+		  END
+	`))
+	// symlink
+	triggers = append(triggers, cli.Dedent(`
+		CREATE TRIGGER IF NOT EXISTS symlink_insert
+		  AFTER INSERT ON symlink
+		  FOR EACH ROW
+		  BEGIN
+		    DELETE FROM file
+		     WHERE info_id = NEW.info_id;
+		  END
+	`))
+	triggers = append(triggers, cli.Dedent(`
+		CREATE TRIGGER IF NOT EXISTS symlink_update
+		  AFTER UPDATE OF info_id, target ON symlink
+		  FOR EACH ROW
+		  BEGIN
+		    UPDATE symlink
+		       SET done = NULL
+		     WHERE id = NEW.id
+		       AND EXISTS (
+		             SELECT *
+		               FROM info AS i
+		              INNER JOIN symlink AS s
+		                      ON i.id = s.info_id
+		              WHERE i.id         = NEW.info_id
+		                AND i.updated_at > NEW.done
+		           );
+		    DELETE FROM file
+		     WHERE info_id = NEW.info_id;
 		  END
 	`))
 }

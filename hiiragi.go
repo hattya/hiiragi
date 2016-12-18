@@ -62,6 +62,30 @@ func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 	}
 }
 
+func (d *Deduper) All() error {
+	// file
+	f, n, err := d.db.NFile()
+	if err != nil {
+		return err
+	}
+	d.p.N = n
+	// symlink
+	s, n, err := d.db.NSymlink()
+	if err != nil {
+		return err
+	}
+	d.p.N += n
+	d.p.Set(f + s)
+
+	d.p.Show = d.Progress
+	defer d.p.Close()
+
+	if err = d.files(); err != nil {
+		return err
+	}
+	return d.symlinks()
+}
+
 func (d *Deduper) Files() error {
 	// file
 	done, n, err := d.db.NFile()
@@ -118,6 +142,69 @@ func (d *Deduper) files() error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+}
+
+func (d *Deduper) Symlinks() error {
+	// symlink
+	done, n, err := d.db.NSymlink()
+	if err != nil {
+		return err
+	}
+	d.p.N = n
+	d.p.Set(done)
+
+	d.p.Show = d.Progress
+	defer d.p.Close()
+
+	return d.symlinks()
+}
+
+func (d *Deduper) symlinks() error {
+	mtime, order := d.mtime()
+	for {
+		syms, err := d.db.NextSymlinks(mtime, order)
+		switch {
+		case err != nil || len(syms) == 0:
+			return err
+		case len(syms) == 1:
+			if err := d.skip(syms[0].Path); err != nil {
+				return err
+			}
+			continue
+		}
+
+		var v []FileInfoEx
+		for _, s := range syms {
+			fi, err := Lstat(s.Path)
+			switch {
+			case err != nil:
+				return err
+			case fi.Mode()&os.ModeType != os.ModeSymlink || !fi.ModTime().Equal(s.Mtime):
+				if err := d.skip(s.Path); err != nil {
+					return err
+				}
+				continue
+			}
+
+			switch t, err := os.Readlink(s.Path); {
+			case err != nil:
+				return err
+			case t != s.Target:
+				if err := d.skip(s.Path); err != nil {
+					return err
+				}
+				continue
+			}
+			v = append(v, fi)
+		}
+
+		err = d.dedup(v, func(fi FileInfoEx) error {
+			return d.db.Done(fi.Path())
+		})
+		if err != nil {
+			return err
 		}
 	}
 }

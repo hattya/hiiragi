@@ -1,5 +1,5 @@
 //
-// hiiragi :: finder.go
+// hiiragi :: hiiragi_unix_test.go
 //
 //   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
 //
@@ -24,76 +24,33 @@
 //   SOFTWARE.
 //
 
-package hiiragi
+// +build !plan9,!windows
+
+package hiiragi_test
 
 import (
 	"os"
-	"path/filepath"
-	"sync"
+	"syscall"
 
-	"github.com/hattya/go.cli"
+	"golang.org/x/sys/unix"
 )
 
-type Finder struct {
-	Progress bool
-
-	ui *cli.CLI
-	db *DB
-	c  chan FileInfoEx
-	wg sync.WaitGroup
-	mu sync.Mutex
-	p  *counter
-}
-
-func NewFinder(ui *cli.CLI, db *DB) *Finder {
-	f := &Finder{
-		Progress: true,
-		ui:       ui,
-		db:       db,
-		c:        make(chan FileInfoEx),
-		p:        newCounter(ui, "scan"),
+func lutimesNano(path string, ts []syscall.Timespec) error {
+	ut := []unix.Timespec{
+		unix.Timespec(ts[0]),
+		unix.Timespec(ts[1]),
 	}
-	go f.update()
-	return f
+	return unix.UtimesNanoAt(unix.AT_FDCWD, path, ut, unix.AT_SYMLINK_NOFOLLOW)
 }
 
-func (f *Finder) update() {
-	f.wg.Add(1)
-	for fi := range f.c {
-		f.mu.Lock()
-		f.p.Update(1)
-		if err := f.db.Update(fi); err != nil {
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
-		}
-		f.mu.Unlock()
+func sameFile(a, b string) bool {
+	fi1, err := os.Lstat(a)
+	if err != nil {
+		return false
 	}
-	f.wg.Done()
-}
-
-func (f *Finder) Close() {
-	close(f.c)
-	f.wg.Wait()
-
-	f.p.Update(0)
-	f.p.Close()
-}
-
-func (f *Finder) Walk(root string) {
-	f.p.Show = f.Progress
-	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
-		switch {
-		case err != nil:
-			f.mu.Lock()
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
-			f.mu.Unlock()
-		case fi.Mode()&(os.ModeType^os.ModeSymlink) == 0:
-			f.c <- &fileStatEx{
-				FileInfo: fi,
-				path:     path,
-			}
-		}
-		return nil
-	})
+	fi2, err := os.Lstat(b)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(fi1, fi2)
 }

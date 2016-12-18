@@ -152,5 +152,5 @@ func dedup(ctx *cli.Context) error {
 	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")
 	d.Progress = progress
-	return d.Files()
+	return d.All()
 }
