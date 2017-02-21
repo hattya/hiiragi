@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -228,7 +228,7 @@ func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err err
 		case src == nil || (d.Name && src.Name() != dst.Name()):
 			src = dst
 			d.i = 0
-		case !d.Attrs || SameFileEx(src, dst):
+		case !d.Attrs || SameAttrs(src, dst):
 			if err = d.link(src.Path(), dst.Path()); err != nil {
 				return
 			}

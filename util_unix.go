@@ -1,7 +1,7 @@
 //
 // hiiragi :: util_unix.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -33,7 +33,7 @@ import (
 	"syscall"
 )
 
-func SameFileEx(fi1, fi2 FileInfoEx) bool {
+func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	sys1 := fi1.Sys().(*syscall.Stat_t)
 	sys2 := fi2.Sys().(*syscall.Stat_t)
 	return sys1.Dev == sys2.Dev && sys1.Mode == sys2.Mode && sys1.Uid == sys2.Uid && sys1.Gid == sys2.Gid

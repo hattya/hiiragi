@@ -1,7 +1,7 @@
 //
 // hiiragi :: util_windows.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -32,7 +32,7 @@ import (
 	"syscall"
 )
 
-func SameFileEx(fi1, fi2 FileInfoEx) bool {
+func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	fs1, ok1 := fi1.(*fileStatEx)
 	fs2, ok2 := fi2.(*fileStatEx)
 	if !ok1 || !ok2 {

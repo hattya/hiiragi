@@ -1,7 +1,7 @@
 //
 // hiiragi :: util_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -86,7 +86,7 @@ func TestStat(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if e, g := hiiragi.SameFileEx(fi1, fi2), true; g != e {
+		if e, g := hiiragi.SameAttrs(fi1, fi2), true; g != e {
 			t.Errorf("expected %v, got %v", e, g)
 		}
 	}
