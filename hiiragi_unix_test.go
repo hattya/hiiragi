@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_unix_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -29,7 +29,6 @@
 package hiiragi_test
 
 import (
-	"os"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -41,16 +40,4 @@ func lutimesNano(path string, ts []syscall.Timespec) error {
 		unix.Timespec(ts[1]),
 	}
 	return unix.UtimesNanoAt(unix.AT_FDCWD, path, ut, unix.AT_SYMLINK_NOFOLLOW)
-}
-
-func sameFile(a, b string) bool {
-	fi1, err := os.Lstat(a)
-	if err != nil {
-		return false
-	}
-	fi2, err := os.Lstat(b)
-	if err != nil {
-		return false
-	}
-	return os.SameFile(fi1, fi2)
 }

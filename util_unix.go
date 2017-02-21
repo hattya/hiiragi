@@ -39,6 +39,15 @@ func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	return sys1.Dev == sys2.Dev && sys1.Mode == sys2.Mode && sys1.Uid == sys2.Uid && sys1.Gid == sys2.Gid
 }
 
+func SameFile(fi1, fi2 FileInfoEx) bool {
+	fs1, ok1 := fi1.(*fileStatEx)
+	fs2, ok2 := fi2.(*fileStatEx)
+	if !ok1 || !ok2 {
+		return false
+	}
+	return os.SameFile(fs1.FileInfo, fs2.FileInfo)
+}
+
 type fileStatEx struct {
 	os.FileInfo
 

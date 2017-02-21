@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -839,6 +839,18 @@ func lchtimes(name string, atime time.Time, mtime time.Time) error {
 		}
 	}
 	return nil
+}
+
+func sameFile(a, b string) bool {
+	fi1, err := hiiragi.Lstat(a)
+	if err != nil {
+		return false
+	}
+	fi2, err := hiiragi.Lstat(b)
+	if err != nil {
+		return false
+	}
+	return hiiragi.SameFile(fi1, fi2)
 }
 
 func tempDir() (string, error) {

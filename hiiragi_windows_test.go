@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_windows_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -50,7 +50,11 @@ func init() {
 }
 
 func lutimesNano(path string, ts []syscall.Timespec) error {
-	h, err := createFile(path)
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	h, err := windows.CreateFile(p, windows.GENERIC_WRITE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		return err
 	}
@@ -59,35 +63,4 @@ func lutimesNano(path string, ts []syscall.Timespec) error {
 	a := windows.NsecToFiletime(windows.TimespecToNsec(windows.Timespec(ts[0])))
 	w := windows.NsecToFiletime(windows.TimespecToNsec(windows.Timespec(ts[1])))
 	return windows.SetFileTime(h, nil, &a, &w)
-}
-
-func sameFile(a, b string) bool {
-	h1, err := createFile(a)
-	if err != nil {
-		return false
-	}
-	defer windows.CloseHandle(h1)
-
-	h2, err := createFile(b)
-	if err != nil {
-		return false
-	}
-	defer windows.CloseHandle(h2)
-
-	var fi1, fi2 windows.ByHandleFileInformation
-	if err := windows.GetFileInformationByHandle(h1, &fi1); err != nil {
-		return false
-	}
-	if err := windows.GetFileInformationByHandle(h2, &fi2); err != nil {
-		return false
-	}
-	return fi1.VolumeSerialNumber == fi2.VolumeSerialNumber && fi1.FileIndexHigh == fi2.FileIndexHigh && fi1.FileIndexLow == fi2.FileIndexLow
-}
-
-func createFile(path string) (windows.Handle, error) {
-	p, err := windows.UTF16PtrFromString(path)
-	if err != nil {
-		return windows.InvalidHandle, err
-	}
-	return windows.CreateFile(p, windows.GENERIC_WRITE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 }

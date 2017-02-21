@@ -49,6 +49,21 @@ func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	return fs1.vol == fs2.vol && sys1.FileAttributes == sys2.FileAttributes
 }
 
+func SameFile(fi1, fi2 FileInfoEx) bool {
+	fs1, ok1 := fi1.(*fileStatEx)
+	fs2, ok2 := fi2.(*fileStatEx)
+	if !ok1 || !ok2 {
+		return false
+	}
+	if err := fs1.load(); err != nil {
+		return false
+	}
+	if err := fs2.load(); err != nil {
+		return false
+	}
+	return fs1.vol == fs2.vol && fs1.idx == fs2.idx
+}
+
 type fileStatEx struct {
 	os.FileInfo
 
@@ -56,6 +71,7 @@ type fileStatEx struct {
 	path  string
 	vol   uint32
 	nlink uint32
+	idx   uint64
 }
 
 func (fs *fileStatEx) load() error {
@@ -81,6 +97,7 @@ func (fs *fileStatEx) load() error {
 	}
 	fs.vol = fi.VolumeSerialNumber
 	fs.nlink = fi.NumberOfLinks
+	fs.idx = uint64(fi.FileIndexHigh)<<32 | uint64(fi.FileIndexLow)
 	return nil
 }
 
