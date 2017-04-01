@@ -70,7 +70,10 @@ func (db *DB) Close() error {
 
 func (db *DB) Begin() error {
 	tx, err := db.db.Begin()
-	db.stack = append(db.stack, &scope{tx})
+	db.stack = append(db.stack, &scope{
+		tx:   tx,
+		stmt: make(map[string]*sql.Stmt),
+	})
 	return err
 }
 
@@ -208,19 +211,26 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 
 func (db *DB) Done(path string) error {
 	return db.withTx(func() (err error) {
-		tx := db.scope().tx
+		s := db.scope()
 		for _, t := range []string{"file", "symlink"} {
-			q := fmt.Sprintf(cli.Dedent(`
-				UPDATE %v
-				   SET done = datetime('now')
-				 WHERE EXISTS (
-				         SELECT *
-				           FROM info AS i
-				          WHERE i.id   = info_id
-				            AND i.path = ?
-				       )
-			`), t)
-			if _, err = tx.Exec(q, path); err != nil {
+			k := "Done." + t
+			stmt, ok := s.stmt[k]
+			if !ok {
+				q := fmt.Sprintf(cli.Dedent(`
+					UPDATE %v
+					   SET done = datetime('now')
+					 WHERE EXISTS (
+					         SELECT *
+					           FROM info AS i
+					          WHERE i.id   = info_id
+					            AND i.path = ?
+					       )
+				`), t)
+				if stmt, err = s.prepare(k, q); err != nil {
+					return
+				}
+			}
+			if _, err = stmt.Exec(path); err != nil {
 				return
 			}
 		}
@@ -230,20 +240,27 @@ func (db *DB) Done(path string) error {
 
 func (db *DB) SetHash(path, hash string) error {
 	return db.withTx(func() (err error) {
-		tx := db.scope().tx
-		q := cli.Dedent(`
-			UPDATE file
-			   SET hash = ?,
-			       done = datetime('now')
-			 WHERE EXISTS (
-			         SELECT *
-			           FROM info AS i
-			          WHERE i.id   = info_id
-			            AND i.path = ?
-			       )
-		`)
-		_, err = tx.Exec(q, hash, path)
-		return
+		s := db.scope()
+		k := "SetHash"
+		stmt, ok := s.stmt[k]
+		if !ok {
+			q := cli.Dedent(`
+				UPDATE file
+				   SET hash = ?,
+				       done = datetime('now')
+				 WHERE EXISTS (
+				         SELECT *
+				           FROM info AS i
+				          WHERE i.id   = info_id
+				            AND i.path = ?
+				       )
+			`)
+			if stmt, err = s.prepare(k, q); err != nil {
+				return
+			}
+		}
+		_, err = stmt.Exec(hash, path)
+		return err
 	})
 }
 
@@ -258,17 +275,30 @@ func (db *DB) Update(fi FileInfoEx) error {
 	}
 
 	return db.withTx(func() (err error) {
-		i := cli.Dedent(`
-			INSERT INTO info (dev, nlink, mtime, path)
-			  VALUES (?, ?, ?, ?)
-		`)
-		u := cli.Dedent(`
-			UPDATE info
-			   SET dev   = ?,
-			       nlink = ?,
-			       mtime = ?
-			 WHERE path = ?
-		`)
+		s := db.scope()
+		i := "Update.INSERT.info"
+		if _, ok := s.stmt[i]; !ok {
+			q := cli.Dedent(`
+				INSERT INTO info (dev, nlink, mtime, path)
+				  VALUES (?, ?, ?, ?)
+			`)
+			if _, err = s.prepare(i, q); err != nil {
+				return
+			}
+		}
+		u := "Update.UPDATE.info"
+		if _, ok := s.stmt[u]; !ok {
+			q := cli.Dedent(`
+				UPDATE info
+				   SET dev   = ?,
+				       nlink = ?,
+				       mtime = ?
+				 WHERE path = ?
+			`)
+			if _, err = s.prepare(u, q); err != nil {
+				return
+			}
+		}
 		if err = db.upsert(i, u, dev, nlink, fi.ModTime(), fi.Path()); err != nil {
 			return
 		}
@@ -289,22 +319,34 @@ func (db *DB) Update(fi FileInfoEx) error {
 				return
 			}
 		}
-		i = fmt.Sprintf(cli.Dedent(`
-			INSERT INTO %v (info_id, %v)
-			  SELECT id, ?
-			    FROM info
-			   WHERE path = ?
-		`), t, col)
-		u = fmt.Sprintf(cli.Dedent(`
-			UPDATE %v
-			   SET %v = ?
-			 WHERE EXISTS (
-			         SELECT *
-			           FROM info AS i
-			          WHERE i.id   = info_id
-			            AND i.path = ?
-			       )
-		`), t, col)
+		i = "Update.INSERT." + t
+		if _, ok := s.stmt[i]; !ok {
+			q := fmt.Sprintf(cli.Dedent(`
+				INSERT INTO %v (info_id, %v)
+				  SELECT id, ?
+				    FROM info
+				   WHERE path = ?
+			`), t, col)
+			if _, err = s.prepare(i, q); err != nil {
+				return
+			}
+		}
+		u = "Update.UPDATE." + t
+		if _, ok := s.stmt[u]; !ok {
+			q := fmt.Sprintf(cli.Dedent(`
+				UPDATE %v
+				   SET %v = ?
+				 WHERE EXISTS (
+				         SELECT *
+				           FROM info AS i
+				          WHERE i.id   = info_id
+				            AND i.path = ?
+				       )
+			`), t, col)
+			if _, err = s.prepare(u, q); err != nil {
+				return
+			}
+		}
 		return db.upsert(i, u, a...)
 	})
 }
@@ -318,14 +360,14 @@ func (db *DB) scope() *scope {
 }
 
 func (db *DB) upsert(insert, update string, a ...interface{}) (err error) {
-	tx := db.scope().tx
-	res, err := tx.Exec(update, a...)
+	s := db.scope()
+	res, err := s.stmt[update].Exec(a...)
 	if err != nil {
 		return
 	}
 	n, err := res.RowsAffected()
 	if err == nil && n < 1 {
-		res, err = tx.Exec(insert, a...)
+		res, err = s.stmt[insert].Exec(a...)
 	}
 	return
 }
@@ -348,7 +390,17 @@ func (db *DB) withTx(fn func() error) (err error) {
 }
 
 type scope struct {
-	tx *sql.Tx
+	tx   *sql.Tx
+	stmt map[string]*sql.Stmt
+}
+
+func (s *scope) prepare(name, query string) (*sql.Stmt, error) {
+	stmt, err := s.tx.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	s.stmt[name] = stmt
+	return stmt, nil
 }
 
 type File struct {
