@@ -228,6 +228,8 @@ func (d *Deduper) dedup(list []FileInfoEx, fn func(FileInfoEx) error) (err error
 		case src == nil || (d.Name && src.Name() != dst.Name()):
 			src = dst
 			d.i = 0
+		case SameFile(src, dst):
+			// skip
 		case !d.Attrs || SameAttrs(src, dst):
 			if err = d.link(src.Path(), dst.Path()); err != nil {
 				return
