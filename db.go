@@ -1,7 +1,7 @@
 //
 // hiiragi :: db.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -252,49 +252,38 @@ func (db *DB) Update(fi FileInfoEx) (err error) {
 		return
 	}
 
+	var t, col string
 	a := make([]interface{}, 2)
 	a[1] = fi.Path()
 	if fi.Mode()&os.ModeType == 0 {
 		// file
-		i = cli.Dedent(`
-			INSERT INTO file (info_id, size)
-			  SELECT id, ?
-			    FROM info
-			   WHERE path = ?
-		`)
-		u = cli.Dedent(`
-			UPDATE file
-			   SET size = ?
-			 WHERE EXISTS (
-			         SELECT *
-			           FROM info AS i
-			          WHERE i.id   = info_id
-			            AND i.path = ?
-			       )
-		`)
+		t = "file"
+		col = "size"
 		a[0] = fi.Size()
 	} else {
 		// symlink
-		i = cli.Dedent(`
-			INSERT INTO symlink (info_id, target)
-			  SELECT id, ?
-			    FROM info
-			   WHERE path = ?
-		`)
-		u = cli.Dedent(`
-			UPDATE symlink
-			   SET target = ?
-			 WHERE EXISTS (
-			         SELECT *
-			           FROM info AS i
-			          WHERE i.id   = info_id
-			            AND i.path = ?
-			       )
-		`)
+		t = "symlink"
+		col = "target"
 		if a[0], err = os.Readlink(fi.Path()); err != nil {
 			return
 		}
 	}
+	i = fmt.Sprintf(cli.Dedent(`
+		INSERT INTO %v (info_id, %v)
+		  SELECT id, ?
+		    FROM info
+		   WHERE path = ?
+	`), t, col)
+	u = fmt.Sprintf(cli.Dedent(`
+		UPDATE %v
+		   SET %v = ?
+		 WHERE EXISTS (
+		         SELECT *
+		           FROM info AS i
+		          WHERE i.id   = info_id
+		            AND i.path = ?
+		       )
+	`), t, col)
 	if err = db.upsert(tx, i, u, a...); err != nil {
 		return
 	}
@@ -426,15 +415,15 @@ func init() {
 	table["info"] = []string{
 		"id         INTEGER   NOT NULL PRIMARY KEY",
 		"path       TEXT      NOT NULL UNIQUE",
-		"dev        INTEGER   NOT NULL",
-		"nlink      INTEGER   NOT NULL DEFAULT 1 CHECK(0 < nlink)",
+		"dev        INTEGER   NOT NULL CHECK (0 < dev)",
+		"nlink      INTEGER   NOT NULL DEFAULT 1 CHECK (0 < nlink)",
 		"mtime      TIMESTAMP NOT NULL",
 		"updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 	}
 	table["file"] = []string{
 		"id         INTEGER   NOT NULL PRIMARY KEY",
 		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
-		"size       INTEGER   NOT NULL",
+		"size       INTEGER   NOT NULL CHECK (0 <= size)",
 		"hash       TEXT",
 		"done       TIMESTAMP",
 	}

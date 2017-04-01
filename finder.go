@@ -1,7 +1,7 @@
 //
 // hiiragi :: finder.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -63,8 +63,7 @@ func (f *Finder) update() {
 		f.mu.Lock()
 		f.p.Update(1)
 		if err := f.db.Update(fi); err != nil {
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
+			f.error(err)
 		}
 		f.mu.Unlock()
 	}
@@ -85,8 +84,7 @@ func (f *Finder) Walk(root string) {
 		switch {
 		case err != nil:
 			f.mu.Lock()
-			f.p.Clear()
-			f.ui.Errorln("error:", err)
+			f.error(err)
 			f.mu.Unlock()
 		case fi.Mode()&(os.ModeType^os.ModeSymlink) == 0:
 			f.c <- &fileStatEx{
@@ -96,4 +94,9 @@ func (f *Finder) Walk(root string) {
 		}
 		return nil
 	})
+}
+
+func (f *Finder) error(err error) {
+	f.p.Clear()
+	f.ui.Errorln("error:", err)
 }

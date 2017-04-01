@@ -109,7 +109,7 @@ func (d *Deduper) files() error {
 		case err != nil || len(files) == 0:
 			return err
 		case len(files) == 1:
-			if err := d.skip(files[0].Path); err != nil {
+			if err = d.skip(files[0].Path); err != nil {
 				return err
 			}
 			continue
@@ -122,7 +122,7 @@ func (d *Deduper) files() error {
 			case err != nil:
 				return err
 			case fi.Mode()&os.ModeType != 0 || fi.Size() != f.Size || !fi.ModTime().Equal(f.Mtime):
-				if err := d.skip(f.Path); err != nil {
+				if err = d.skip(f.Path); err != nil {
 					return err
 				}
 				continue
@@ -136,7 +136,7 @@ func (d *Deduper) files() error {
 		}
 
 		for h, v := range hash {
-			err := d.dedup(v, func(fi FileInfoEx) error {
+			err = d.dedup(v, func(fi FileInfoEx) error {
 				return d.db.SetHash(fi.Path(), h)
 			})
 			if err != nil {
@@ -169,7 +169,7 @@ func (d *Deduper) symlinks() error {
 		case err != nil || len(syms) == 0:
 			return err
 		case len(syms) == 1:
-			if err := d.skip(syms[0].Path); err != nil {
+			if err = d.skip(syms[0].Path); err != nil {
 				return err
 			}
 			continue
@@ -182,7 +182,7 @@ func (d *Deduper) symlinks() error {
 			case err != nil:
 				return err
 			case fi.Mode()&os.ModeType != os.ModeSymlink || !fi.ModTime().Equal(s.Mtime):
-				if err := d.skip(s.Path); err != nil {
+				if err = d.skip(s.Path); err != nil {
 					return err
 				}
 				continue
@@ -192,7 +192,7 @@ func (d *Deduper) symlinks() error {
 			case err != nil:
 				return err
 			case t != s.Target:
-				if err := d.skip(s.Path); err != nil {
+				if err = d.skip(s.Path); err != nil {
 					return err
 				}
 				continue
@@ -218,7 +218,7 @@ func (d *Deduper) mtime() (bool, Order) {
 	return mtime, order
 }
 
-func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err error) {
+func (d *Deduper) dedup(list []FileInfoEx, fn func(FileInfoEx) error) (err error) {
 	var src FileInfoEx
 	if d.Name {
 		sort.Stable(FileInfoExSlice(list))
@@ -233,7 +233,7 @@ func (d *Deduper) dedup(list []FileInfoEx, f func(fi FileInfoEx) error) (err err
 				return
 			}
 		}
-		if err = f(dst); err != nil {
+		if err = fn(dst); err != nil {
 			return
 		}
 		d.p.Update(1)
