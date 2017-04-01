@@ -29,7 +29,6 @@ package hiiragi
 import (
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/hattya/go.cli"
 )
@@ -39,9 +38,6 @@ type Finder struct {
 
 	ui *cli.CLI
 	db *DB
-	c  chan FileInfoEx
-	wg sync.WaitGroup
-	mu sync.Mutex
 	p  *counter
 }
 
@@ -50,50 +46,44 @@ func NewFinder(ui *cli.CLI, db *DB) *Finder {
 		Progress: true,
 		ui:       ui,
 		db:       db,
-		c:        make(chan FileInfoEx),
 		p:        newCounter(ui, "scan"),
 	}
-	go f.update()
 	return f
 }
 
-func (f *Finder) update() {
-	f.wg.Add(1)
-	for fi := range f.c {
-		f.mu.Lock()
-		f.p.Update(1)
-		if err := f.db.Update(fi); err != nil {
-			f.error(err)
-		}
-		f.mu.Unlock()
-	}
-	f.wg.Done()
-}
-
 func (f *Finder) Close() {
-	close(f.c)
-	f.wg.Wait()
-
 	f.p.Update(0)
 	f.p.Close()
 }
 
 func (f *Finder) Walk(root string) {
+	if err := f.db.Begin(); err != nil {
+		f.error(err)
+		return
+	}
+	defer f.db.Rollback()
+
 	f.p.Show = f.Progress
 	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		switch {
 		case err != nil:
-			f.mu.Lock()
 			f.error(err)
-			f.mu.Unlock()
 		case fi.Mode()&(os.ModeType^os.ModeSymlink) == 0:
-			f.c <- &fileStatEx{
+			fi := &fileStatEx{
 				FileInfo: fi,
 				path:     path,
 			}
+			if err := f.db.Update(fi); err != nil {
+				f.error(err)
+			}
+			f.p.Update(1)
 		}
 		return nil
 	})
+
+	if err := f.db.Commit(); err != nil {
+		f.error(err)
+	}
 }
 
 func (f *Finder) error(err error) {

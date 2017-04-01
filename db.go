@@ -42,7 +42,8 @@ import (
 )
 
 type DB struct {
-	db *sql.DB
+	db    *sql.DB
+	stack []*scope
 }
 
 func Create(name string) (*DB, error) {
@@ -57,11 +58,46 @@ func Open(name string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DB{db}, nil
+	return &DB{
+		db:    db,
+		stack: nil,
+	}, nil
 }
 
 func (db *DB) Close() error {
 	return db.db.Close()
+}
+
+func (db *DB) Begin() error {
+	tx, err := db.db.Begin()
+	db.stack = append(db.stack, &scope{tx})
+	return err
+}
+
+func (db *DB) Commit() error {
+	s := db.pop()
+	if s == nil {
+		return nil
+	}
+	return s.tx.Commit()
+}
+
+func (db *DB) Rollback() error {
+	s := db.pop()
+	if s == nil {
+		return nil
+	}
+	return s.tx.Rollback()
+}
+
+func (db *DB) pop() *scope {
+	n := len(db.stack) - 1
+	if n < 0 {
+		return nil
+	}
+	s := db.stack[n]
+	db.stack = db.stack[:n]
+	return s
 }
 
 func (db *DB) NFile() (int64, int64, error) {
@@ -170,128 +206,119 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 	return
 }
 
-func (db *DB) Done(path string) (err error) {
-	tx, err := db.db.Begin()
-	if err != nil {
+func (db *DB) Done(path string) error {
+	return db.withTx(func() (err error) {
+		tx := db.scope().tx
+		for _, t := range []string{"file", "symlink"} {
+			q := fmt.Sprintf(cli.Dedent(`
+				UPDATE %v
+				   SET done = datetime('now')
+				 WHERE EXISTS (
+				         SELECT *
+				           FROM info AS i
+				          WHERE i.id   = info_id
+				            AND i.path = ?
+				       )
+			`), t)
+			if _, err = tx.Exec(q, path); err != nil {
+				return
+			}
+		}
 		return
-	}
-	defer tx.Rollback()
+	})
+}
 
-	for _, t := range []string{"file", "symlink"} {
-		q := fmt.Sprintf(cli.Dedent(`
-			UPDATE %v
-			   SET done = datetime('now')
+func (db *DB) SetHash(path, hash string) error {
+	return db.withTx(func() (err error) {
+		tx := db.scope().tx
+		q := cli.Dedent(`
+			UPDATE file
+			   SET hash = ?,
+			       done = datetime('now')
 			 WHERE EXISTS (
 			         SELECT *
 			           FROM info AS i
 			          WHERE i.id   = info_id
 			            AND i.path = ?
 			       )
-		`), t)
-		if _, err = tx.Exec(q, path); err != nil {
-			return
-		}
-	}
-
-	return tx.Commit()
+		`)
+		_, err = tx.Exec(q, hash, path)
+		return
+	})
 }
 
-func (db *DB) SetHash(path, hash string) (err error) {
-	tx, err := db.db.Begin()
-	if err != nil {
-		return
-	}
-	defer tx.Rollback()
-
-	q := cli.Dedent(`
-		UPDATE file
-		   SET hash = ?,
-		       done = datetime('now')
-		 WHERE EXISTS (
-		         SELECT *
-		           FROM info AS i
-		          WHERE i.id   = info_id
-		            AND i.path = ?
-		       )
-	`)
-	if _, err = tx.Exec(q, hash, path); err != nil {
-		return
-	}
-
-	return tx.Commit()
-}
-
-func (db *DB) Update(fi FileInfoEx) (err error) {
+func (db *DB) Update(fi FileInfoEx) error {
 	dev, err := fi.Dev()
 	if err != nil {
-		return
+		return err
 	}
 	nlink, err := fi.Nlink()
 	if err != nil {
-		return
+		return err
 	}
 
-	tx, err := db.db.Begin()
-	if err != nil {
-		return
-	}
-	defer tx.Rollback()
-
-	i := cli.Dedent(`
-		INSERT INTO info (dev, nlink, mtime, path)
-		  VALUES (?, ?, ?, ?)
-	`)
-	u := cli.Dedent(`
-		UPDATE info
-		   SET dev   = ?,
-		       nlink = ?,
-		       mtime = ?
-		 WHERE path = ?
-	`)
-	if err = db.upsert(tx, i, u, dev, nlink, fi.ModTime(), fi.Path()); err != nil {
-		return
-	}
-
-	var t, col string
-	a := make([]interface{}, 2)
-	a[1] = fi.Path()
-	if fi.Mode()&os.ModeType == 0 {
-		// file
-		t = "file"
-		col = "size"
-		a[0] = fi.Size()
-	} else {
-		// symlink
-		t = "symlink"
-		col = "target"
-		if a[0], err = os.Readlink(fi.Path()); err != nil {
+	return db.withTx(func() (err error) {
+		i := cli.Dedent(`
+			INSERT INTO info (dev, nlink, mtime, path)
+			  VALUES (?, ?, ?, ?)
+		`)
+		u := cli.Dedent(`
+			UPDATE info
+			   SET dev   = ?,
+			       nlink = ?,
+			       mtime = ?
+			 WHERE path = ?
+		`)
+		if err = db.upsert(i, u, dev, nlink, fi.ModTime(), fi.Path()); err != nil {
 			return
 		}
-	}
-	i = fmt.Sprintf(cli.Dedent(`
-		INSERT INTO %v (info_id, %v)
-		  SELECT id, ?
-		    FROM info
-		   WHERE path = ?
-	`), t, col)
-	u = fmt.Sprintf(cli.Dedent(`
-		UPDATE %v
-		   SET %v = ?
-		 WHERE EXISTS (
-		         SELECT *
-		           FROM info AS i
-		          WHERE i.id   = info_id
-		            AND i.path = ?
-		       )
-	`), t, col)
-	if err = db.upsert(tx, i, u, a...); err != nil {
-		return
-	}
 
-	return tx.Commit()
+		var t, col string
+		a := make([]interface{}, 2)
+		a[1] = fi.Path()
+		if fi.Mode()&os.ModeType == 0 {
+			// file
+			t = "file"
+			col = "size"
+			a[0] = fi.Size()
+		} else {
+			// symlink
+			t = "symlink"
+			col = "target"
+			if a[0], err = os.Readlink(fi.Path()); err != nil {
+				return
+			}
+		}
+		i = fmt.Sprintf(cli.Dedent(`
+			INSERT INTO %v (info_id, %v)
+			  SELECT id, ?
+			    FROM info
+			   WHERE path = ?
+		`), t, col)
+		u = fmt.Sprintf(cli.Dedent(`
+			UPDATE %v
+			   SET %v = ?
+			 WHERE EXISTS (
+			         SELECT *
+			           FROM info AS i
+			          WHERE i.id   = info_id
+			            AND i.path = ?
+			       )
+		`), t, col)
+		return db.upsert(i, u, a...)
+	})
 }
 
-func (db *DB) upsert(tx *sql.Tx, insert, update string, a ...interface{}) (err error) {
+func (db *DB) scope() *scope {
+	n := len(db.stack) - 1
+	if n < 0 {
+		return nil
+	}
+	return db.stack[n]
+}
+
+func (db *DB) upsert(insert, update string, a ...interface{}) (err error) {
+	tx := db.scope().tx
 	res, err := tx.Exec(update, a...)
 	if err != nil {
 		return
@@ -301,6 +328,27 @@ func (db *DB) upsert(tx *sql.Tx, insert, update string, a ...interface{}) (err e
 		res, err = tx.Exec(insert, a...)
 	}
 	return
+}
+
+func (db *DB) withTx(fn func() error) (err error) {
+	auto := db.scope() == nil
+	if auto {
+		if err = db.Begin(); err != nil {
+			return
+		}
+		defer db.Rollback()
+	}
+	if err = fn(); err != nil {
+		return
+	}
+	if auto {
+		return db.Commit()
+	}
+	return nil
+}
+
+type scope struct {
+	tx *sql.Tx
 }
 
 type File struct {
@@ -406,9 +454,11 @@ var (
 func init() {
 	pragma = map[string]string{
 		"auto_vacuum":   "FULL",
+		"cache_size":    "-16000",
 		"foreign_keys":  "ON",
 		"journal_mode":  "WAL",
 		"secure_delete": "ON",
+		"synchronous":   "NORMAL",
 	}
 
 	table = make(map[string][]string)

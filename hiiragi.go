@@ -115,6 +115,11 @@ func (d *Deduper) files() error {
 			continue
 		}
 
+		if err = d.db.Begin(); err != nil {
+			return err
+		}
+		defer d.db.Rollback()
+
 		hash := make(map[string][]FileInfoEx)
 		for _, f := range files {
 			fi, err := Lstat(f.Path)
@@ -142,6 +147,10 @@ func (d *Deduper) files() error {
 			if err != nil {
 				return err
 			}
+		}
+
+		if err = d.db.Commit(); err != nil {
+			return err
 		}
 	}
 }
@@ -175,6 +184,11 @@ func (d *Deduper) symlinks() error {
 			continue
 		}
 
+		if err = d.db.Begin(); err != nil {
+			return err
+		}
+		defer d.db.Rollback()
+
 		var v []FileInfoEx
 		for _, s := range syms {
 			fi, err := Lstat(s.Path)
@@ -204,6 +218,10 @@ func (d *Deduper) symlinks() error {
 			return d.db.Done(fi.Path())
 		})
 		if err != nil {
+			return err
+		}
+
+		if err = d.db.Commit(); err != nil {
 			return err
 		}
 	}
