@@ -219,11 +219,10 @@ func (db *DB) Done(path string) error {
 				q := fmt.Sprintf(cli.Dedent(`
 					UPDATE %v
 					   SET done = datetime('now')
-					 WHERE EXISTS (
-					         SELECT *
+					 WHERE info_id IN (
+					         SELECT id
 					           FROM info AS i
-					          WHERE i.id   = info_id
-					            AND i.path = ?
+					          WHERE i.path = ?
 					       )
 				`), t)
 				if stmt, err = s.prepare(k, q); err != nil {
@@ -248,11 +247,10 @@ func (db *DB) SetHash(path, hash string) error {
 				UPDATE file
 				   SET hash = ?,
 				       done = datetime('now')
-				 WHERE EXISTS (
-				         SELECT *
+				 WHERE info_id IN (
+				         SELECT id
 				           FROM info AS i
-				          WHERE i.id   = info_id
-				            AND i.path = ?
+				          WHERE i.path = ?
 				       )
 			`)
 			if stmt, err = s.prepare(k, q); err != nil {
@@ -336,11 +334,10 @@ func (db *DB) Update(fi FileInfoEx) error {
 			q := fmt.Sprintf(cli.Dedent(`
 				UPDATE %v
 				   SET %v = ?
-				 WHERE EXISTS (
-				         SELECT *
+				 WHERE info_id IN (
+				         SELECT id
 				           FROM info AS i
-				          WHERE i.id   = info_id
-				            AND i.path = ?
+				          WHERE i.path = ?
 				       )
 			`), t, col)
 			if _, err = s.prepare(u, q); err != nil {
@@ -548,22 +545,10 @@ func init() {
 		    UPDATE file
 		       SET hash = NULL,
 		           done = NULL
-		     WHERE EXISTS (
-		             SELECT *
-		               FROM info AS i
-		              INNER JOIN file AS f
-		                      ON i.id = f.info_id
-		              WHERE i.id = NEW.id
-		           );
+		     WHERE info_id = NEW.id;
 		    UPDATE symlink
 		       SET done = NULL
-		     WHERE EXISTS (
-		             SELECT *
-		               FROM info AS i
-		              INNER JOIN symlink AS s
-		                      ON i.id = s.info_id
-		              WHERE i.id = NEW.id
-		           );
+		     WHERE info_id = NEW.id;
 		  END
 	`))
 	// file
@@ -588,8 +573,6 @@ func init() {
 		       AND EXISTS (
 		             SELECT *
 		               FROM info AS i
-		              INNER JOIN file AS f
-		                      ON i.id = f.info_id
 		              WHERE i.id         = NEW.info_id
 		                AND i.updated_at > NEW.done
 		           );
@@ -618,8 +601,6 @@ func init() {
 		       AND EXISTS (
 		             SELECT *
 		               FROM info AS i
-		              INNER JOIN symlink AS s
-		                      ON i.id = s.info_id
 		              WHERE i.id         = NEW.info_id
 		                AND i.updated_at > NEW.done
 		           );
