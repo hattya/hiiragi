@@ -1,7 +1,7 @@
 //
 // hiiragi :: progress.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -49,6 +49,7 @@ func newCounter(ui *cli.CLI, label string) *counter {
 		Show:  true,
 		ui:    ui,
 		label: label,
+		bol:   true,
 	}
 }
 
