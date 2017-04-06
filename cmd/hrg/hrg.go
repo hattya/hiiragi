@@ -112,7 +112,9 @@ func dedup(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			f.Walk(p)
+			if err := f.Walk(p); err != nil {
+				return err
+			}
 		}
 		f.Close()
 	}

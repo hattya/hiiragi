@@ -56,10 +56,9 @@ func (f *Finder) Close() {
 	f.p.Close()
 }
 
-func (f *Finder) Walk(root string) {
+func (f *Finder) Walk(root string) error {
 	if err := f.db.Begin(); err != nil {
-		f.error(err)
-		return
+		return err
 	}
 	defer f.db.Rollback()
 
@@ -74,16 +73,19 @@ func (f *Finder) Walk(root string) {
 				path:     path,
 			}
 			if err := f.db.Update(fi); err != nil {
-				f.error(err)
+				switch err.(type) {
+				case *os.PathError:
+					f.error(err)
+				default:
+					return err
+				}
 			}
 			f.p.Update(1)
 		}
 		return nil
 	})
 
-	if err := f.db.Commit(); err != nil {
-		f.error(err)
-	}
+	return f.db.Commit()
 }
 
 func (f *Finder) error(err error) {

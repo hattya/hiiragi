@@ -232,7 +232,9 @@ func TestDedupNoFiles(t *testing.T) {
 	ui.Stderr = ioutil.Discard
 
 	f := hiiragi.NewFinder(ui, db)
-	f.Walk(root)
+	if err := f.Walk(root); err != nil {
+		t.Fatal(err)
+	}
 	f.Close()
 	if err := count(db, len(files)); err != nil {
 		t.Error(err)
@@ -503,7 +505,9 @@ func TestDedupNoSymlinks(t *testing.T) {
 	ui.Stderr = ioutil.Discard
 
 	f := hiiragi.NewFinder(ui, db)
-	f.Walk(root)
+	if err := f.Walk(root); err != nil {
+		t.Fatal(err)
+	}
 	f.Close()
 	if err := count(db, len(syms)); err != nil {
 		t.Error(err)
@@ -705,7 +709,9 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	defer db.Close()
 
 	f := hiiragi.NewFinder(ui, db)
-	f.Walk(root)
+	if err = f.Walk(root); err != nil {
+		return
+	}
 	f.Close()
 	if err = count(db, len(list)); err != nil {
 		return

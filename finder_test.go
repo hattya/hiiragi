@@ -1,7 +1,7 @@
 //
 // hiiragi :: finder_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -65,8 +65,12 @@ func TestFinder(t *testing.T) {
 	ui.Stderr = ioutil.Discard
 
 	f := hiiragi.NewFinder(ui, db)
-	f.Walk(root)
-	f.Walk(filepath.Join(root, "dir"))
+	if err := f.Walk(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Walk(filepath.Join(root, "dir")); err != nil {
+		t.Fatal(err)
+	}
 	f.Close()
 	if err := count(db, 4); err != nil {
 		t.Error(err)

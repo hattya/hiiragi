@@ -87,13 +87,21 @@ func (fs *fileStatEx) load() error {
 	}
 	h, err := syscall.CreateFile(p, 0, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_BACKUP_SEMANTICS|syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
-		return err
+		return &os.PathError{
+			Op:   "CreateFile",
+			Path: fs.path,
+			Err:  err,
+		}
 	}
 	defer syscall.CloseHandle(h)
 
 	var fi syscall.ByHandleFileInformation
 	if err := syscall.GetFileInformationByHandle(h, &fi); err != nil {
-		return err
+		return &os.PathError{
+			Op:   "GetFileInformationByHandle",
+			Path: fs.path,
+			Err:  err,
+		}
 	}
 	fs.vol = fi.VolumeSerialNumber
 	fs.nlink = fi.NumberOfLinks
@@ -110,7 +118,7 @@ func (fs *fileStatEx) Dev() (uint64, error) {
 
 func (fs *fileStatEx) Nlink() (uint64, error) {
 	if err := fs.load(); err != nil {
-		return 0, nil
+		return 0, err
 	}
 	return uint64(fs.nlink), nil
 }
