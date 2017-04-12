@@ -139,13 +139,13 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 
 	v := reflect.New(tt).Elem()
 	ak := []reflect.Value{
-		v.FieldByName("Dev"),
 		v.FieldByName(col),
+		v.FieldByName("Dev"),
 		v.FieldByName("Mtime"),
 	}
 	q := fmt.Sprintf(cli.Dedent(`
-		SELECT i.dev,
-		       %v,
+		SELECT %v,
+		       i.dev,
 		       i.mtime
 		  FROM %v
 		       INNER JOIN info AS i
@@ -175,9 +175,9 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 		  FROM %v
 		       INNER JOIN info AS i
 		          ON info_id = i.id
-		 WHERE i.dev   =  ?
+		 WHERE done    IS NULL
 		   AND %[1]v   =  ?
-		   AND done    IS NULL
+		   AND i.dev   =  ?
 	`), strings.ToLower(col), strings.ToLower(tt.Name()))
 	if mtime {
 		b.WriteString(cli.Dedent(`
@@ -498,6 +498,7 @@ const (
 var (
 	pragma   map[string]string
 	table    map[string][]string
+	index    map[string][][]string
 	triggers []string
 )
 
@@ -532,6 +533,17 @@ func init() {
 		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
 		"target     TEXT      NOT NULL",
 		"done       TIMESTAMP",
+	}
+
+	index = make(map[string][][]string)
+	index["info"] = [][]string{
+		{"dev", "mtime"},
+	}
+	index["file"] = [][]string{
+		{"info_id", "done", "size"},
+	}
+	index["symlink"] = [][]string{
+		{"info_id", "done", "target"},
 	}
 
 	// info
@@ -628,6 +640,16 @@ func open(name string) (*sql.DB, error) {
 		if _, err := db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v (\n  %v\n)", k, strings.Join(v, ",\n  "))); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("CREATE TABLE %v: %v", k, err)
+		}
+	}
+
+	for k, v := range index {
+		for i, v := range v {
+			idx := fmt.Sprintf("index_%v_%v", k, i+1)
+			if _, err := db.Exec(fmt.Sprintf("CREATE INDEX IF NOT EXISTS %v ON %v (%v)", idx, k, strings.Join(v, ", "))); err != nil {
+				db.Close()
+				return nil, fmt.Errorf("CREATE INDEX %v: %v", idx, err)
+			}
 		}
 	}
 
