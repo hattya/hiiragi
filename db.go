@@ -144,13 +144,14 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 		v.FieldByName("Mtime"),
 	}
 	q := fmt.Sprintf(cli.Dedent(`
-		SELECT dev,
+		SELECT i.dev,
 		       %v,
 		       i.mtime
 		  FROM %v
-		 INNER JOIN info AS i
-		         ON info_id = i.id
+		       INNER JOIN info AS i
+		          ON info_id = i.id
 		 WHERE done IS NULL
+		 LIMIT 1
 	`), strings.ToLower(col), strings.ToLower(tt.Name()))
 	if err = db.db.QueryRow(q).Scan(ak[0].Addr().Interface(), ak[1].Addr().Interface(), ak[2].Addr().Interface()); err != nil {
 		if err == sql.ErrNoRows {
@@ -172,9 +173,9 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 		       i.mtime,
 		       %v
 		  FROM %v
-		 INNER JOIN info AS i
-		         ON info_id = i.id
-		 WHERE dev     =  ?
+		       INNER JOIN info AS i
+		          ON info_id = i.id
+		 WHERE i.dev   =  ?
 		   AND %[1]v   =  ?
 		   AND done    IS NULL
 	`), strings.ToLower(col), strings.ToLower(tt.Name()))
@@ -220,7 +221,7 @@ func (db *DB) Done(path string) error {
 					UPDATE %v
 					   SET done = datetime('now')
 					 WHERE info_id IN (
-					         SELECT id
+					         SELECT i.id
 					           FROM info AS i
 					          WHERE i.path = ?
 					       )
@@ -248,7 +249,7 @@ func (db *DB) SetHash(path, hash string) error {
 				   SET hash = ?,
 				       done = datetime('now')
 				 WHERE info_id IN (
-				         SELECT id
+				         SELECT i.id
 				           FROM info AS i
 				          WHERE i.path = ?
 				       )
@@ -278,7 +279,7 @@ func (db *DB) Update(fi FileInfoEx) error {
 		if _, ok := s.stmt[i]; !ok {
 			q := cli.Dedent(`
 				INSERT INTO info (dev, nlink, mtime, path)
-				  VALUES (?, ?, ?, ?)
+				VALUES (?, ?, ?, ?)
 			`)
 			if _, err = s.prepare(i, q); err != nil {
 				return
@@ -321,9 +322,9 @@ func (db *DB) Update(fi FileInfoEx) error {
 		if _, ok := s.stmt[i]; !ok {
 			q := fmt.Sprintf(cli.Dedent(`
 				INSERT INTO %v (info_id, %v)
-				  SELECT id, ?
-				    FROM info
-				   WHERE path = ?
+				SELECT id, ?
+				  FROM info
+				 WHERE path = ?
 			`), t, col)
 			if _, err = s.prepare(i, q); err != nil {
 				return
@@ -335,7 +336,7 @@ func (db *DB) Update(fi FileInfoEx) error {
 				UPDATE %v
 				   SET %v = ?
 				 WHERE info_id IN (
-				         SELECT id
+				         SELECT i.id
 				           FROM info AS i
 				          WHERE i.path = ?
 				       )
@@ -558,7 +559,7 @@ func init() {
 		  FOR EACH ROW
 		  BEGIN
 		    DELETE FROM symlink
-			 WHERE info_id = NEW.info_id;
+		     WHERE info_id = NEW.info_id;
 		  END
 	`))
 	triggers = append(triggers, cli.Dedent(`
