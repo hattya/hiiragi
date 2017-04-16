@@ -43,6 +43,7 @@ import (
 
 type DB struct {
 	db    *sql.DB
+	stmt  map[string]*sql.Stmt
 	stack []*scope
 }
 
@@ -60,6 +61,7 @@ func Open(name string) (*DB, error) {
 	}
 	return &DB{
 		db:    db,
+		stmt:  make(map[string]*sql.Stmt),
 		stack: nil,
 	}, nil
 }
@@ -112,12 +114,19 @@ func (db *DB) NSymlink() (int64, int64, error) {
 }
 
 func (db *DB) count(t string) (done, n int64, err error) {
-	q := fmt.Sprintf(cli.Dedent(`
-		SELECT count(done),
-		       count(*)
-		  FROM %v
-	`), t)
-	err = db.db.QueryRow(q).Scan(&done, &n)
+	k := "count." + t
+	stmt, ok := db.stmt[k]
+	if !ok {
+		q := fmt.Sprintf(cli.Dedent(`
+			SELECT count(done),
+			       count(*)
+			  FROM %v
+		`), t)
+		if stmt, err = db.prepare(k, q); err != nil {
+			return
+		}
+	}
+	err = stmt.QueryRow().Scan(&done, &n)
 	return
 }
 
@@ -137,41 +146,51 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
 	list = lv.Interface() // make type assertion simple
 
-	var b bytes.Buffer
-	fmt.Fprintf(&b, cli.Dedent(`
-		  WITH next (
-		         value,
-		         dev,
-		         mtime
-		       ) AS (
-		         SELECT %v,
-		                i.dev,
-		                i.mtime
-		          FROM  %v
-		                INNER JOIN info AS i
-		                   ON info_id = i.id
-		          WHERE done IS NULL
-		          LIMIT 1
-		       )
-		SELECT i.path,
-		       i.dev,
-		       i.nlink,
-		       i.mtime,
-		       %[1]v
-		  FROM %v
-		       INNER JOIN info AS i
-		          ON info_id = i.id,
-		       next AS n
-		 WHERE done    IS NULL
-		   AND %[1]v   =  n.value
-		   AND i.dev   =  n.dev
-	`), strings.ToLower(col), strings.ToLower(tt.Name()))
+	k := "next." + tt.Name()
 	if mtime {
-		b.WriteString(cli.Dedent(`
-		   AND i.mtime =  n.mtime
-		`))
+		k += ".mtime"
 	}
-	rows, err := db.db.Query(b.String())
+	stmt, ok := db.stmt[k]
+	if !ok {
+		var b bytes.Buffer
+		fmt.Fprintf(&b, cli.Dedent(`
+			  WITH next (
+			         value,
+			         dev,
+			         mtime
+			       ) AS (
+			         SELECT %v,
+			                i.dev,
+			                i.mtime
+			          FROM  %v
+			                INNER JOIN info AS i
+			                   ON info_id = i.id
+			          WHERE done IS NULL
+			          LIMIT 1
+			       )
+			SELECT i.path,
+			       i.dev,
+			       i.nlink,
+			       i.mtime,
+			       %[1]v
+			  FROM %v
+			       INNER JOIN info AS i
+			          ON info_id = i.id,
+			       next AS n
+			 WHERE done    IS NULL
+			   AND %[1]v   =  n.value
+			   AND i.dev   =  n.dev
+		`), strings.ToLower(col), strings.ToLower(tt.Name()))
+		if mtime {
+			b.WriteString(cli.Dedent(`
+			   AND i.mtime =  n.mtime
+			`))
+		}
+		if stmt, err = db.prepare(k, b.String()); err != nil {
+			return
+		}
+	}
+	rows, err := stmt.Query()
 	if err != nil {
 		return
 	}
@@ -193,6 +212,14 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 	err = rows.Err()
 	sortEntries(list, order)
 	return
+}
+
+func (db *DB) prepare(name, query string) (*sql.Stmt, error) {
+	stmt, err := db.db.Prepare(query)
+	if err == nil {
+		db.stmt[name] = stmt
+	}
+	return stmt, err
 }
 
 func (db *DB) Done(path string) error {
