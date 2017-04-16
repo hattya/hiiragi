@@ -278,8 +278,18 @@ func (db *DB) Update(fi FileInfoEx) error {
 		i := "Update.INSERT.info"
 		if _, ok := s.stmt[i]; !ok {
 			q := cli.Dedent(`
-				INSERT INTO info (dev, nlink, mtime, path)
-				VALUES (?, ?, ?, ?)
+				INSERT INTO info (
+				         dev,
+				         nlink,
+				         mtime,
+				         path
+				       )
+				VALUES (
+				         ?,
+				         ?,
+				         ?,
+				         ?
+				       )
 			`)
 			if _, err = s.prepare(i, q); err != nil {
 				return
@@ -321,8 +331,12 @@ func (db *DB) Update(fi FileInfoEx) error {
 		i = "Update.INSERT." + t
 		if _, ok := s.stmt[i]; !ok {
 			q := fmt.Sprintf(cli.Dedent(`
-				INSERT INTO %v (info_id, %v)
-				SELECT id, ?
+				INSERT INTO %v (
+				         info_id,
+				         %v
+				       )
+				SELECT id,
+				       ?
 				  FROM info
 				 WHERE path = ?
 			`), t, col)
@@ -394,11 +408,10 @@ type scope struct {
 
 func (s *scope) prepare(name, query string) (*sql.Stmt, error) {
 	stmt, err := s.tx.Prepare(query)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		s.stmt[name] = stmt
 	}
-	s.stmt[name] = stmt
-	return stmt, nil
+	return stmt, err
 }
 
 type File struct {
