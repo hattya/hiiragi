@@ -137,56 +137,41 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
 	list = lv.Interface() // make type assertion simple
 
-	v := reflect.New(tt).Elem()
-	ak := []reflect.Value{
-		v.FieldByName(col),
-		v.FieldByName("Dev"),
-		v.FieldByName("Mtime"),
-	}
-	q := fmt.Sprintf(cli.Dedent(`
-		SELECT %v,
-		       i.dev,
-		       i.mtime
-		  FROM %v
-		       INNER JOIN info AS i
-		          ON info_id = i.id
-		 WHERE done IS NULL
-		 LIMIT 1
-	`), strings.ToLower(col), strings.ToLower(tt.Name()))
-	if err = db.db.QueryRow(q).Scan(ak[0].Addr().Interface(), ak[1].Addr().Interface(), ak[2].Addr().Interface()); err != nil {
-		if err == sql.ErrNoRows {
-			err = nil
-		}
-		return
-	}
-
-	a := []interface{}{
-		ak[0].Interface(),
-		ak[1].Interface(),
-		ak[2].Interface(),
-	}
 	var b bytes.Buffer
 	fmt.Fprintf(&b, cli.Dedent(`
+		  WITH next (
+		         value,
+		         dev,
+		         mtime
+		       ) AS (
+		         SELECT %v,
+		                i.dev,
+		                i.mtime
+		          FROM  %v
+		                INNER JOIN info AS i
+		                   ON info_id = i.id
+		          WHERE done IS NULL
+		          LIMIT 1
+		       )
 		SELECT i.path,
 		       i.dev,
 		       i.nlink,
 		       i.mtime,
-		       %v
+		       %[1]v
 		  FROM %v
 		       INNER JOIN info AS i
-		          ON info_id = i.id
+		          ON info_id = i.id,
+		       next AS n
 		 WHERE done    IS NULL
-		   AND %[1]v   =  ?
-		   AND i.dev   =  ?
+		   AND %[1]v   =  n.value
+		   AND i.dev   =  n.dev
 	`), strings.ToLower(col), strings.ToLower(tt.Name()))
 	if mtime {
 		b.WriteString(cli.Dedent(`
-		   AND i.mtime =  ?
+		   AND i.mtime =  n.mtime
 		`))
-	} else {
-		a = a[:2]
 	}
-	rows, err := db.db.Query(b.String(), a...)
+	rows, err := db.db.Query(b.String())
 	if err != nil {
 		return
 	}
