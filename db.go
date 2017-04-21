@@ -117,16 +117,17 @@ func (db *DB) count(t string) (done, n int64, err error) {
 	k := "count." + t
 	stmt, ok := db.stmt[k]
 	if !ok {
-		q := fmt.Sprintf(cli.Dedent(`
-			SELECT count(done),
-			       count(*)
-			  FROM %v
-		`), t)
+		q := cli.Dedent(`
+			SELECT done,
+			       total
+			  FROM master
+			 WHERE type = ?
+		`)
 		if stmt, err = db.prepare(k, q); err != nil {
 			return
 		}
 	}
-	err = stmt.QueryRow().Scan(&done, &n)
+	err = stmt.QueryRow(t).Scan(&done, &n)
 	return
 }
 
@@ -560,6 +561,13 @@ func init() {
 		"done       TIMESTAMP",
 	}
 
+	table["master"] = []string{
+		"id         INTEGER NOT NULL PRIMARY KEY",
+		"type       TEXT    NOT NULL UNIQUE",
+		"done       INTEGER NOT NULL CHECK (0 <= done)  DEFAULT 0",
+		"total      INTEGER NOT NULL CHECK (0 <= total) DEFAULT 0",
+	}
+
 	index = make(map[string][][]string)
 	index["info"] = [][]string{
 		{"dev", "mtime"},
@@ -589,16 +597,39 @@ func init() {
 		     WHERE info_id = NEW.id;
 		  END
 	`))
+
+	for _, a := range [][]interface{}{
+		{"file", "symlink"},
+		{"symlink", "file"},
+	} {
+		triggers = append(triggers, fmt.Sprintf(cli.Dedent(`
+			CREATE TRIGGER IF NOT EXISTS %v_insert
+			  AFTER INSERT ON %[1]v
+			  FOR EACH ROW
+			  BEGIN
+			    DELETE FROM %v
+			     WHERE info_id = NEW.info_id;
+			    UPDATE master
+			       SET total = total - 1
+			     WHERE type      = '%[2]v'
+			       AND changes() > 0;
+			    UPDATE master
+			       SET total = total + 1
+			     WHERE type = '%[1]v';
+			  END
+		`), a...))
+		triggers = append(triggers, fmt.Sprintf(cli.Dedent(`
+			CREATE TRIGGER IF NOT EXISTS %v_delete
+			  AFTER DELETE ON %[1]v
+			  FOR EACH ROW
+			  BEGIN
+			    UPDATE master
+			       SET done = done + 1
+			     WHERE type = '%[1]v';
+			  END
+		`), a...))
+	}
 	// file
-	triggers = append(triggers, cli.Dedent(`
-		CREATE TRIGGER IF NOT EXISTS file_insert
-		  AFTER INSERT ON file
-		  FOR EACH ROW
-		  BEGIN
-		    DELETE FROM symlink
-		     WHERE info_id = NEW.info_id;
-		  END
-	`))
 	triggers = append(triggers, cli.Dedent(`
 		CREATE TRIGGER IF NOT EXISTS file_update
 		  AFTER UPDATE OF info_id, size ON file
@@ -619,15 +650,6 @@ func init() {
 		  END
 	`))
 	// symlink
-	triggers = append(triggers, cli.Dedent(`
-		CREATE TRIGGER IF NOT EXISTS symlink_insert
-		  AFTER INSERT ON symlink
-		  FOR EACH ROW
-		  BEGIN
-		    DELETE FROM file
-		     WHERE info_id = NEW.info_id;
-		  END
-	`))
 	triggers = append(triggers, cli.Dedent(`
 		CREATE TRIGGER IF NOT EXISTS symlink_update
 		  AFTER UPDATE OF info_id, target ON symlink
@@ -685,5 +707,19 @@ func open(name string) (*sql.DB, error) {
 		}
 	}
 
-	return db, err
+	tx, err := db.Begin()
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	for _, t := range []string{"file", "symlink"} {
+		if _, err := tx.Exec("INSERT INTO master (type) VALUES (?)", t); err != nil {
+			db.Close()
+			return nil, err
+		}
+	}
+
+	return db, tx.Commit()
 }
