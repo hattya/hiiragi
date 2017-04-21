@@ -166,7 +166,6 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 			          FROM  %v
 			                INNER JOIN info AS i
 			                   ON info_id = i.id
-			          WHERE done IS NULL
 			          LIMIT 1
 			       )
 			SELECT i.path,
@@ -178,8 +177,7 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 			       INNER JOIN info AS i
 			          ON info_id = i.id,
 			       next AS n
-			 WHERE done    IS NULL
-			   AND %[1]v   =  n.value
+			 WHERE %[1]v   =  n.value
 			   AND i.dev   =  n.dev
 		`), strings.ToLower(col), strings.ToLower(tt.Name()))
 		if mtime {
@@ -231,8 +229,7 @@ func (db *DB) Done(path string) error {
 			stmt, ok := s.stmt[k]
 			if !ok {
 				q := fmt.Sprintf(cli.Dedent(`
-					UPDATE %v
-					   SET done = datetime('now')
+					DELETE FROM %v
 					 WHERE info_id IN (
 					         SELECT i.id
 					           FROM info AS i
@@ -248,31 +245,6 @@ func (db *DB) Done(path string) error {
 			}
 		}
 		return
-	})
-}
-
-func (db *DB) SetHash(path, hash string) error {
-	return db.withTx(func() (err error) {
-		s := db.scope()
-		k := "SetHash"
-		stmt, ok := s.stmt[k]
-		if !ok {
-			q := cli.Dedent(`
-				UPDATE file
-				   SET hash = ?,
-				       done = datetime('now')
-				 WHERE info_id IN (
-				         SELECT i.id
-				           FROM info AS i
-				          WHERE i.path = ?
-				       )
-			`)
-			if stmt, err = s.prepare(k, q); err != nil {
-				return
-			}
-		}
-		_, err = stmt.Exec(hash, path)
-		return err
 	})
 }
 
@@ -545,20 +517,16 @@ func init() {
 		"dev        INTEGER   NOT NULL CHECK (0 < dev)",
 		"nlink      INTEGER   NOT NULL DEFAULT 1 CHECK (0 < nlink)",
 		"mtime      TIMESTAMP NOT NULL",
-		"updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
 	}
 	table["file"] = []string{
 		"id         INTEGER   NOT NULL PRIMARY KEY",
 		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
 		"size       INTEGER   NOT NULL CHECK (0 <= size)",
-		"hash       TEXT",
-		"done       TIMESTAMP",
 	}
 	table["symlink"] = []string{
 		"id         INTEGER   NOT NULL PRIMARY KEY",
 		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
 		"target     TEXT      NOT NULL",
-		"done       TIMESTAMP",
 	}
 
 	table["master"] = []string{
@@ -573,30 +541,11 @@ func init() {
 		{"dev", "mtime"},
 	}
 	index["file"] = [][]string{
-		{"info_id", "done", "size"},
+		{"info_id", "size"},
 	}
 	index["symlink"] = [][]string{
-		{"info_id", "done", "target"},
+		{"info_id", "target"},
 	}
-
-	// info
-	triggers = append(triggers, cli.Dedent(`
-		CREATE TRIGGER IF NOT EXISTS info_update
-		  AFTER UPDATE OF path, dev, nlink, mtime ON info
-		  FOR EACH ROW
-		  BEGIN
-		    UPDATE info
-		       SET updated_at = datetime('now')
-		     WHERE id = NEW.id;
-		    UPDATE file
-		       SET hash = NULL,
-		           done = NULL
-		     WHERE info_id = NEW.id;
-		    UPDATE symlink
-		       SET done = NULL
-		     WHERE info_id = NEW.id;
-		  END
-	`))
 
 	for _, a := range [][]interface{}{
 		{"file", "symlink"},
@@ -629,45 +578,6 @@ func init() {
 			  END
 		`), a...))
 	}
-	// file
-	triggers = append(triggers, cli.Dedent(`
-		CREATE TRIGGER IF NOT EXISTS file_update
-		  AFTER UPDATE OF info_id, size ON file
-		  FOR EACH ROW
-		  BEGIN
-		    UPDATE file
-		       SET hash = NULL,
-		           done = NULL
-		     WHERE id = NEW.id
-		       AND EXISTS (
-		             SELECT *
-		               FROM info AS i
-		              WHERE i.id         = NEW.info_id
-		                AND i.updated_at > NEW.done
-		           );
-		    DELETE FROM symlink
-		     WHERE info_id = NEW.info_id;
-		  END
-	`))
-	// symlink
-	triggers = append(triggers, cli.Dedent(`
-		CREATE TRIGGER IF NOT EXISTS symlink_update
-		  AFTER UPDATE OF info_id, target ON symlink
-		  FOR EACH ROW
-		  BEGIN
-		    UPDATE symlink
-		       SET done = NULL
-		     WHERE id = NEW.id
-		       AND EXISTS (
-		             SELECT *
-		               FROM info AS i
-		              WHERE i.id         = NEW.info_id
-		                AND i.updated_at > NEW.done
-		           );
-		    DELETE FROM file
-		     WHERE info_id = NEW.info_id;
-		  END
-	`))
 }
 
 func open(name string) (*sql.DB, error) {
@@ -715,7 +625,7 @@ func open(name string) (*sql.DB, error) {
 	defer tx.Rollback()
 
 	for _, t := range []string{"file", "symlink"} {
-		if _, err := tx.Exec("INSERT INTO master (type) VALUES (?)", t); err != nil {
+		if _, err := tx.Exec("INSERT OR IGNORE INTO master (type) VALUES (?)", t); err != nil {
 			db.Close()
 			return nil, err
 		}

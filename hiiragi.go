@@ -140,11 +140,8 @@ func (d *Deduper) files() error {
 			hash[h] = append(hash[h], fi)
 		}
 
-		for h, v := range hash {
-			err = d.dedup(v, func(fi FileInfoEx) error {
-				return d.db.SetHash(fi.Path(), h)
-			})
-			if err != nil {
+		for _, v := range hash {
+			if err = d.dedup(v); err != nil {
 				return err
 			}
 		}
@@ -214,10 +211,7 @@ func (d *Deduper) symlinks() error {
 			v = append(v, fi)
 		}
 
-		err = d.dedup(v, func(fi FileInfoEx) error {
-			return d.db.Done(fi.Path())
-		})
-		if err != nil {
+		if err = d.dedup(v); err != nil {
 			return err
 		}
 
@@ -236,7 +230,7 @@ func (d *Deduper) mtime() (bool, Order) {
 	return mtime, order
 }
 
-func (d *Deduper) dedup(list []FileInfoEx, fn func(FileInfoEx) error) (err error) {
+func (d *Deduper) dedup(list []FileInfoEx) (err error) {
 	var src FileInfoEx
 	if d.Name {
 		sort.Stable(FileInfoExSlice(list))
@@ -253,7 +247,7 @@ func (d *Deduper) dedup(list []FileInfoEx, fn func(FileInfoEx) error) (err error
 				return
 			}
 		}
-		if err = fn(dst); err != nil {
+		if err = d.db.Done(dst.Path()); err != nil {
 			return
 		}
 		d.p.Update(1)

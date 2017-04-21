@@ -1,7 +1,7 @@
 //
 // hiiragi :: db_test.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -113,7 +113,7 @@ func TestDBFiles(t *testing.T) {
 		if err != nil {
 			return
 		}
-		if g, e := n+done, int64(0); g != e {
+		if g, e := n-done, int64(0); g != e {
 			err = fmt.Errorf("expected count(symlink) = %v, got %v", e, g)
 		}
 		return
@@ -147,12 +147,8 @@ func TestDBFiles(t *testing.T) {
 	if err := test(db, 1); err != nil {
 		t.Fatal(err)
 	}
-	// set hash: f2
-	h, err := hiiragi.Sum(f2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SetHash(f2, h); err != nil {
+	// mark done: f1
+	if err := db.Done(f2); err != nil {
 		t.Fatal(err)
 	}
 	if err := test(db, 0); err != nil {
@@ -208,7 +204,7 @@ func TestDBSymlinks(t *testing.T) {
 		if err != nil {
 			return
 		}
-		if g, e := n+done, int64(0); g != e {
+		if g, e := n-done, int64(0); g != e {
 			err = fmt.Errorf("expected count(file) = %v, got %v", e, g)
 		}
 		return
@@ -243,13 +239,6 @@ func TestDBSymlinks(t *testing.T) {
 	}
 	// mark done: s1
 	if err := db.Done(s1); err != nil {
-		t.Fatal(err)
-	}
-	if err := test(db, 1); err != nil {
-		t.Fatal(err)
-	}
-	// set hash: s2
-	if err := db.SetHash(s2, ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := test(db, 1); err != nil {
