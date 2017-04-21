@@ -515,7 +515,7 @@ func init() {
 		"id         INTEGER   NOT NULL PRIMARY KEY",
 		"path       TEXT      NOT NULL UNIQUE",
 		"dev        INTEGER   NOT NULL CHECK (0 < dev)",
-		"nlink      INTEGER   NOT NULL DEFAULT 1 CHECK (0 < nlink)",
+		"nlink      INTEGER   NOT NULL CHECK (0 < nlink) DEFAULT 1",
 		"mtime      TIMESTAMP NOT NULL",
 	}
 	table["file"] = []string{
