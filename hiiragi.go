@@ -78,6 +78,7 @@ func (d *Deduper) All() error {
 	d.p.Set(f + s)
 
 	d.p.Show = d.Progress
+	d.p.Update(0)
 	defer d.p.Close()
 
 	if err = d.files(); err != nil {
@@ -96,6 +97,7 @@ func (d *Deduper) Files() error {
 	d.p.Set(done)
 
 	d.p.Show = d.Progress
+	d.p.Update(0)
 	defer d.p.Close()
 
 	return d.files()
@@ -162,6 +164,7 @@ func (d *Deduper) Symlinks() error {
 	d.p.Set(done)
 
 	d.p.Show = d.Progress
+	d.p.Update(0)
 	defer d.p.Close()
 
 	return d.symlinks()
