@@ -79,6 +79,37 @@ func TestDBCreate(t *testing.T) {
 	}
 }
 
+func TestDBOpen(t *testing.T) {
+	dir, err := tempDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g, e := len(files), 1; g != e {
+		t.Errorf("expected len(files) = %v, got %v", e, g)
+	}
+
+	db, err = hiiragi.Open(filepath.Join(dir, "hiiragi.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDBFiles(t *testing.T) {
 	dir, err := tempDir()
 	if err != nil {
