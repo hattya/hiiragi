@@ -512,28 +512,28 @@ func init() {
 
 	table = make(map[string][]string)
 	table["info"] = []string{
-		"id         INTEGER   NOT NULL PRIMARY KEY",
-		"path       TEXT      NOT NULL UNIQUE",
-		"dev        INTEGER   NOT NULL CHECK (0 < dev)",
-		"nlink      INTEGER   NOT NULL CHECK (0 < nlink) DEFAULT 1",
-		"mtime      TIMESTAMP NOT NULL",
+		"id      INTEGER   NOT NULL PRIMARY KEY",
+		"path    TEXT      NOT NULL UNIQUE",
+		"dev     INTEGER   NOT NULL CHECK (0 < dev)",
+		"nlink   INTEGER   NOT NULL CHECK (0 < nlink) DEFAULT 1",
+		"mtime   TIMESTAMP NOT NULL",
 	}
 	table["file"] = []string{
-		"id         INTEGER   NOT NULL PRIMARY KEY",
-		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
-		"size       INTEGER   NOT NULL CHECK (0 <= size)",
+		"id      INTEGER   NOT NULL PRIMARY KEY",
+		"info_id INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
+		"size    INTEGER   NOT NULL CHECK (0 <= size)",
 	}
 	table["symlink"] = []string{
-		"id         INTEGER   NOT NULL PRIMARY KEY",
-		"info_id    INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
-		"target     TEXT      NOT NULL",
+		"id      INTEGER   NOT NULL PRIMARY KEY",
+		"info_id INTEGER   NOT NULL REFERENCES info (id) ON DELETE CASCADE UNIQUE",
+		"target  TEXT      NOT NULL",
 	}
 
 	table["master"] = []string{
-		"id         INTEGER NOT NULL PRIMARY KEY",
-		"type       TEXT    NOT NULL UNIQUE",
-		"done       INTEGER NOT NULL CHECK (0 <= done)  DEFAULT 0",
-		"total      INTEGER NOT NULL CHECK (0 <= total) DEFAULT 0",
+		"id      INTEGER NOT NULL PRIMARY KEY",
+		"type    TEXT    NOT NULL UNIQUE",
+		"done    INTEGER NOT NULL CHECK (0 <= done)  DEFAULT 0",
+		"total   INTEGER NOT NULL CHECK (0 <= total) DEFAULT 0",
 	}
 
 	index = make(map[string][][]string)
@@ -586,7 +586,15 @@ func open(name string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	for k, v := range pragma {
+	list := make(sort.StringSlice, len(pragma))
+	i := 0
+	for k := range pragma {
+		list[i] = k
+		i++
+	}
+	list.Sort()
+	for _, k := range list {
+		v := pragma[k]
 		if _, err := db.Exec(fmt.Sprintf("PRAGMA %v = %v", k, v)); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("PRAGMA %v = '%v': %v", k, v, err)
