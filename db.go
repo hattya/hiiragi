@@ -70,6 +70,11 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
+func (db *DB) SetCacheSize(size int64) error {
+	_, err := db.db.Exec(fmt.Sprintf(`PRAGMA cache_size = %v`, size))
+	return err
+}
+
 func (db *DB) Begin() error {
 	tx, err := db.db.Begin()
 	db.stack = append(db.stack, &scope{
@@ -503,7 +508,7 @@ var (
 func init() {
 	pragma = map[string]string{
 		"auto_vacuum":   "FULL",
-		"cache_size":    "-16000",
+		"cache_size":    "-65536",
 		"foreign_keys":  "ON",
 		"journal_mode":  "WAL",
 		"secure_delete": "ON",

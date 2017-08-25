@@ -37,6 +37,7 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
+	"github.com/cloudfoundry/gosigar"
 	"github.com/hattya/go.cli"
 	"github.com/hattya/hiiragi"
 	"github.com/mattn/go-colorable"
@@ -57,6 +58,11 @@ func main() {
 }
 
 func init() {
+	mem := sigar.Mem{}
+	if err := mem.Get(); err != nil {
+		panic(err)
+	}
+
 	app.Version = hiiragi.Version
 	app.Usage = "[options] PATH"
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
@@ -70,6 +76,7 @@ func init() {
 	app.Flags.Bool("n, name", false, "ignore file name")
 	app.Flags.Bool("p, pretend", false, "show what will be done")
 	app.Flags.Bool("r, resume", false, "resume dedup with the specified cache file")
+	app.Flags.Int64("s, size", -int64(mem.Total/2/1024), "cache size for SQLite (default: 50%% of system memory)")
 	app.Action = cli.Simple(dedup)
 	app.Stdout = colorable.NewColorable(os.Stdout)
 	app.Stderr = colorable.NewColorable(os.Stderr)
@@ -103,6 +110,9 @@ func dedup(ctx *cli.Context) error {
 		return err
 	}
 	defer db.Close()
+	if err := db.SetCacheSize(ctx.Int64("size")); err != nil {
+		return err
+	}
 
 	if !ctx.Bool("resume") {
 		f := hiiragi.NewFinder(ctx.UI, db)
@@ -144,6 +154,9 @@ func dedup(ctx *cli.Context) error {
 			return err
 		}
 		defer db.Close()
+		if err := db.SetCacheSize(ctx.Int64("size")); err != nil {
+			return err
+		}
 	}
 
 	d := hiiragi.NewDeduper(ctx.UI, db)
