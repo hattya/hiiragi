@@ -10,6 +10,10 @@ are under the specified directory.
 .. image:: https://ci.appveyor.com/api/projects/status/m6b63xt5nvegv53m/branch/master?svg=true
    :target: https://ci.appveyor.com/project/hattya/hiiragi
 
+.. image:: https://codecov.io/gh/hattya/hiiragi/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/hattya/hiiragi
+
+
 Installation
 ------------
 
