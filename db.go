@@ -436,7 +436,35 @@ func sortEntries(list interface{}, order Order) interface{} {
 			Data:  v.Addr(),
 		}
 	}
-	sort.Sort(entrySlice{s, order})
+	less := func(a, b []string) bool {
+		if len(a) != len(b) {
+			return len(a) < len(b)
+		}
+		for i := range a {
+			if a[i] != b[i] {
+				return a[i] < b[i]
+			}
+		}
+		return false
+	}
+	sort.Slice(s, func(i, j int) bool {
+		a := s[i]
+		b := s[j]
+		if !a.Mtime.Equal(b.Mtime) {
+			if order == Desc {
+				return a.Mtime.After(b.Mtime)
+			}
+			return a.Mtime.Before(b.Mtime)
+		}
+		if a.Nlink != b.Nlink {
+			return a.Nlink > b.Nlink
+		}
+		if less(a.Vol, b.Vol) {
+			// local disk < shared folder
+			return true
+		}
+		return less(a.Path, b.Path)
+	})
 	for i, e := range s {
 		lv.Index(i).Set(e.Data.(reflect.Value))
 	}
@@ -449,46 +477,6 @@ type entry struct {
 	Nlink uint64
 	Mtime time.Time
 	Data  interface{}
-}
-
-type entrySlice struct {
-	s     []*entry
-	order Order
-}
-
-func (p entrySlice) Len() int      { return len(p.s) }
-func (p entrySlice) Swap(i, j int) { p.s[i], p.s[j] = p.s[j], p.s[i] }
-
-func (p entrySlice) Less(i, j int) bool {
-	a := p.s[i]
-	b := p.s[j]
-	if !a.Mtime.Equal(b.Mtime) {
-		if p.order == Desc {
-			return a.Mtime.After(b.Mtime)
-		}
-		return a.Mtime.Before(b.Mtime)
-	}
-	if a.Nlink != b.Nlink {
-		return a.Nlink > b.Nlink
-	}
-	if p.less(a.Vol, b.Vol) {
-		// local disk < shared folder
-		return true
-	}
-	return p.less(a.Path, b.Path)
-}
-
-func (p entrySlice) less(a, b []string) bool {
-	if len(a) != len(b) {
-		return len(a) < len(b)
-	} else {
-		for i := range a {
-			if a[i] != b[i] {
-				return a[i] < b[i]
-			}
-		}
-		return false
-	}
 }
 
 type Order uint

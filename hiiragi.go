@@ -261,7 +261,7 @@ func (d *Deduper) mtime() (bool, Order) {
 func (d *Deduper) dedup(ctx context.Context, list []FileInfoEx) (err error) {
 	var src FileInfoEx
 	if d.Name {
-		sort.Stable(FileInfoExSlice(list))
+		sort.SliceStable(list, func(i, j int) bool { return list[i].Name() < list[j].Name() })
 	}
 	for _, dst := range list {
 		select {

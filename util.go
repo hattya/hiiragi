@@ -1,7 +1,7 @@
 //
 // hiiragi :: util.go
 //
-//   Copyright (c) 2016 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
 //   Permission is hereby granted, free of charge, to any person
 //   obtaining a copy of this software and associated documentation files
@@ -92,9 +92,3 @@ func (fs *fileStatEx) ModTime() time.Time {
 func (fs *fileStatEx) Path() string {
 	return fs.path
 }
-
-type FileInfoExSlice []FileInfoEx
-
-func (p FileInfoExSlice) Len() int           { return len(p) }
-func (p FileInfoExSlice) Less(i, j int) bool { return p[i].Name() < p[j].Name() }
-func (p FileInfoExSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
