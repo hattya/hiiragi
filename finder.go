@@ -27,6 +27,7 @@
 package hiiragi
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -56,14 +57,20 @@ func (f *Finder) Close() {
 	f.p.Close()
 }
 
-func (f *Finder) Walk(root string) error {
+func (f *Finder) Walk(ctx context.Context, root string) error {
 	if err := f.db.Begin(); err != nil {
 		return err
 	}
 	defer f.db.Rollback()
 
 	f.p.Show = f.Progress
-	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		switch {
 		case err != nil:
 			f.error(err)
@@ -84,6 +91,9 @@ func (f *Finder) Walk(root string) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	return f.db.Commit()
 }

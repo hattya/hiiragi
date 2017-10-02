@@ -1,5 +1,5 @@
 //
-// hrg :: hrg_unix.go
+// hiiragi/cmd/hrg :: hrg_unix.go
 //
 //   Copyright (c) 2017 Akinori Hattori <hattya@gmail.com>
 //

@@ -27,6 +27,7 @@
 package hiiragi_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -195,6 +196,16 @@ func TestDedupAllIgnoreAll(t *testing.T) {
 	}
 }
 
+func TestDedupAllInterrupt(t *testing.T) {
+	dir, _, err := dedup("all", map[string]interface{}{
+		"interrupt": true,
+	})
+	if err != context.Canceled {
+		t.Error(err)
+	}
+	os.RemoveAll(dir)
+}
+
 func TestDedupNoFiles(t *testing.T) {
 	dir, err := tempDir()
 	if err != nil {
@@ -231,8 +242,11 @@ func TestDedupNoFiles(t *testing.T) {
 	ui.Stdout = ioutil.Discard
 	ui.Stderr = ioutil.Discard
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	f := hiiragi.NewFinder(ui, db)
-	if err := f.Walk(root); err != nil {
+	if err := f.Walk(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 	f.Close()
@@ -254,7 +268,7 @@ func TestDedupNoFiles(t *testing.T) {
 	}
 
 	d := hiiragi.NewDeduper(ui, db)
-	if err := d.Files(); err != nil {
+	if err := d.Files(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if sameFile(files[0], files[1]) {
@@ -460,6 +474,16 @@ func TestDedupFilesPretend(t *testing.T) {
 	}
 }
 
+func TestDedupFilesInterrupt(t *testing.T) {
+	dir, _, err := dedup("files", map[string]interface{}{
+		"interrupt": true,
+	})
+	if err != context.Canceled {
+		t.Error(err)
+	}
+	os.RemoveAll(dir)
+}
+
 func TestDedupNoSymlinks(t *testing.T) {
 	if !supportsSymlinks {
 		t.Skipf("skipping on %v", runtime.GOOS)
@@ -504,8 +528,11 @@ func TestDedupNoSymlinks(t *testing.T) {
 	ui.Stdout = ioutil.Discard
 	ui.Stderr = ioutil.Discard
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	f := hiiragi.NewFinder(ui, db)
-	if err := f.Walk(root); err != nil {
+	if err := f.Walk(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 	f.Close()
@@ -534,7 +561,7 @@ func TestDedupNoSymlinks(t *testing.T) {
 	}
 
 	d := hiiragi.NewDeduper(ui, db)
-	if err := d.Symlinks(); err != nil {
+	if err := d.Symlinks(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if sameFile(syms[0], syms[1]) {
@@ -664,6 +691,20 @@ func TestDedupSymlinksPretend(t *testing.T) {
 	}
 }
 
+func TestDedupSymlinksInterrupt(t *testing.T) {
+	if !supportsSymlinks {
+		t.Skipf("skipping on %v", runtime.GOOS)
+	}
+
+	dir, _, err := dedup("symlinks", map[string]interface{}{
+		"interrupt": true,
+	})
+	if err != context.Canceled {
+		t.Error(err)
+	}
+	os.RemoveAll(dir)
+}
+
 func dedup(action string, opts map[string]interface{}) (dir string, list []string, err error) {
 	dir, err = tempDir()
 	if err != nil {
@@ -702,6 +743,9 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	ui.Stdout = ioutil.Discard
 	ui.Stderr = ioutil.Discard
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		return
@@ -709,7 +753,7 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	defer db.Close()
 
 	f := hiiragi.NewFinder(ui, db)
-	if err = f.Walk(root); err != nil {
+	if err = f.Walk(ctx, root); err != nil {
 		return
 	}
 	f.Close()
@@ -730,13 +774,16 @@ func dedup(action string, opts map[string]interface{}) (dir string, list []strin
 	if v, ok := opts["pretend"]; ok {
 		d.Pretend = v.(bool)
 	}
+	if v, ok := opts["interrupt"]; ok && v.(bool) {
+		cancel()
+	}
 	switch action {
 	case "all":
-		err = d.All()
+		err = d.All(ctx)
 	case "files":
-		err = d.Files()
+		err = d.Files(ctx)
 	case "symlinks":
-		err = d.Symlinks()
+		err = d.Symlinks(ctx)
 	}
 	return
 }

@@ -1,5 +1,5 @@
 //
-// hrg :: hrg.go
+// hiiragi/cmd/hrg :: hrg.go
 //
 //   Copyright (c) 2016-2017 Akinori Hattori <hattya@gmail.com>
 //
@@ -27,6 +27,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -88,9 +89,13 @@ func dedup(ctx *cli.Context) error {
 		progress = terminal.IsTerminal(int(f.Fd()))
 	}
 
+	ctx_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	trap(sig, func() {
+		cancel()
 		if progress {
 			ctx.UI.Printf("\x1b[?25h")
 		}
@@ -122,7 +127,7 @@ func dedup(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if err := f.Walk(p); err != nil {
+			if err := f.Walk(ctx_, p); err != nil {
 				return err
 			}
 		}
@@ -165,5 +170,5 @@ func dedup(ctx *cli.Context) error {
 	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")
 	d.Progress = progress
-	return d.All()
+	return d.All(ctx_)
 }

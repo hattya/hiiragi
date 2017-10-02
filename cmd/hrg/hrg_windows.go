@@ -1,5 +1,5 @@
 //
-// hrg :: hrg_windows.go
+// hiiragi/cmd/hrg :: hrg_windows.go
 //
 //   Copyright (c) 2017 Akinori Hattori <hattya@gmail.com>
 //

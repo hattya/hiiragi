@@ -27,6 +27,7 @@
 package hiiragi
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -62,7 +63,7 @@ func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 	}
 }
 
-func (d *Deduper) All() error {
+func (d *Deduper) All(ctx context.Context) error {
 	// file
 	f, n, err := d.db.NFile()
 	if err != nil {
@@ -81,13 +82,13 @@ func (d *Deduper) All() error {
 	d.p.Update(0)
 	defer d.p.Close()
 
-	if err = d.files(); err != nil {
+	if err = d.files(ctx); err != nil {
 		return err
 	}
-	return d.symlinks()
+	return d.symlinks(ctx)
 }
 
-func (d *Deduper) Files() error {
+func (d *Deduper) Files(ctx context.Context) error {
 	// file
 	done, n, err := d.db.NFile()
 	if err != nil {
@@ -100,12 +101,20 @@ func (d *Deduper) Files() error {
 	d.p.Update(0)
 	defer d.p.Close()
 
-	return d.files()
+	return d.files(ctx)
 }
 
-func (d *Deduper) files() error {
+func (d *Deduper) files(ctx context.Context) error {
+	defer d.db.Rollback()
+
 	mtime, order := d.mtime()
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		files, err := d.db.NextFiles(mtime, order)
 		switch {
 		case err != nil || len(files) == 0:
@@ -120,10 +129,15 @@ func (d *Deduper) files() error {
 		if err = d.db.Begin(); err != nil {
 			return err
 		}
-		defer d.db.Rollback()
 
 		hash := make(map[string][]FileInfoEx)
 		for _, f := range files {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
 			fi, err := Lstat(f.Path)
 			switch {
 			case err != nil:
@@ -141,9 +155,8 @@ func (d *Deduper) files() error {
 			}
 			hash[h] = append(hash[h], fi)
 		}
-
 		for _, v := range hash {
-			if err = d.dedup(v); err != nil {
+			if err = d.dedup(ctx, v); err != nil {
 				return err
 			}
 		}
@@ -154,7 +167,7 @@ func (d *Deduper) files() error {
 	}
 }
 
-func (d *Deduper) Symlinks() error {
+func (d *Deduper) Symlinks(ctx context.Context) error {
 	// symlink
 	done, n, err := d.db.NSymlink()
 	if err != nil {
@@ -167,12 +180,20 @@ func (d *Deduper) Symlinks() error {
 	d.p.Update(0)
 	defer d.p.Close()
 
-	return d.symlinks()
+	return d.symlinks(ctx)
 }
 
-func (d *Deduper) symlinks() error {
+func (d *Deduper) symlinks(ctx context.Context) error {
+	defer d.db.Rollback()
+
 	mtime, order := d.mtime()
 	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		syms, err := d.db.NextSymlinks(mtime, order)
 		switch {
 		case err != nil || len(syms) == 0:
@@ -187,10 +208,15 @@ func (d *Deduper) symlinks() error {
 		if err = d.db.Begin(); err != nil {
 			return err
 		}
-		defer d.db.Rollback()
 
 		var v []FileInfoEx
 		for _, s := range syms {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
 			fi, err := Lstat(s.Path)
 			switch {
 			case err != nil:
@@ -213,8 +239,7 @@ func (d *Deduper) symlinks() error {
 			}
 			v = append(v, fi)
 		}
-
-		if err = d.dedup(v); err != nil {
+		if err = d.dedup(ctx, v); err != nil {
 			return err
 		}
 
@@ -233,12 +258,18 @@ func (d *Deduper) mtime() (bool, Order) {
 	return mtime, order
 }
 
-func (d *Deduper) dedup(list []FileInfoEx) (err error) {
+func (d *Deduper) dedup(ctx context.Context, list []FileInfoEx) (err error) {
 	var src FileInfoEx
 	if d.Name {
 		sort.Stable(FileInfoExSlice(list))
 	}
 	for _, dst := range list {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		switch {
 		case src == nil || (d.Name && src.Name() != dst.Name()):
 			src = dst
