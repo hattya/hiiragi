@@ -133,14 +133,14 @@ func TestDBFiles(t *testing.T) {
 		if err != nil {
 			return
 		}
-		done, n, err := db.NFile()
+		done, n, err := db.NumFiles()
 		if err != nil {
 			return
 		}
 		if g, e := n-done, v; g != e {
 			err = fmt.Errorf("expected count(file) = %v, got %v", e, g)
 		}
-		done, n, err = db.NSymlink()
+		done, n, err = db.NumSymlinks()
 		if err != nil {
 			return
 		}
@@ -224,14 +224,14 @@ func TestDBSymlinks(t *testing.T) {
 		if err != nil {
 			return
 		}
-		done, n, err := db.NSymlink()
+		done, n, err := db.NumSymlinks()
 		if err != nil {
 			return
 		}
 		if g, e := n-done, v; g != e {
 			err = fmt.Errorf("expected count(symlink) = %v, got %v", e, g)
 		}
-		done, n, err = db.NFile()
+		done, n, err = db.NumFiles()
 		if err != nil {
 			return
 		}
@@ -317,11 +317,11 @@ func TestDBUpdate(t *testing.T) {
 	}
 
 	test := func(db *hiiragi.DB, v int64) (err error) {
-		_, nf, err := db.NFile()
+		_, nf, err := db.NumFiles()
 		if err != nil {
 			return
 		}
-		_, ns, err := db.NSymlink()
+		_, ns, err := db.NumSymlinks()
 		if err != nil {
 			return
 		}
@@ -387,11 +387,11 @@ func TestDBUpdate(t *testing.T) {
 }
 
 func count(db *hiiragi.DB, e int) error {
-	_, nf, err := db.NFile()
+	_, nf, err := db.NumFiles()
 	if err != nil {
 		return err
 	}
-	_, ns, err := db.NSymlink()
+	_, ns, err := db.NumSymlinks()
 	if err != nil {
 		return err
 	}

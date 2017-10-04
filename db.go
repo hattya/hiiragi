@@ -110,11 +110,11 @@ func (db *DB) pop() *scope {
 	return s
 }
 
-func (db *DB) NFile() (int64, int64, error) {
+func (db *DB) NumFiles() (int64, int64, error) {
 	return db.count(`file`)
 }
 
-func (db *DB) NSymlink() (int64, int64, error) {
+func (db *DB) NumSymlinks() (int64, int64, error) {
 	return db.count(`symlink`)
 }
 

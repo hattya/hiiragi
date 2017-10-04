@@ -67,7 +67,7 @@ func SameFile(fi1, fi2 FileInfoEx) bool {
 type fileStatEx struct {
 	os.FileInfo
 
-	sync.Mutex
+	mu    sync.Mutex
 	path  string
 	vol   uint32
 	nlink uint32
@@ -75,8 +75,9 @@ type fileStatEx struct {
 }
 
 func (fs *fileStatEx) load() error {
-	fs.Lock()
-	defer fs.Unlock()
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	if fs.nlink != 0 {
 		return nil
 	}

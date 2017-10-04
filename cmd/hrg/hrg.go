@@ -35,7 +35,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"golang.org/x/crypto/ssh/terminal"
 
@@ -101,10 +100,6 @@ func dedup(ctx *cli.Context) error {
 	go func() {
 		<-sig
 		cancel()
-		if progress {
-			time.Sleep(101 * time.Millisecond)
-			ctx.UI.Printf("\x1b[?25h")
-		}
 	}()
 
 	c := ctx.String("cache")

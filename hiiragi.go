@@ -65,13 +65,13 @@ func NewDeduper(ui *cli.CLI, db *DB) *Deduper {
 
 func (d *Deduper) All(ctx context.Context) error {
 	// file
-	f, n, err := d.db.NFile()
+	f, n, err := d.db.NumFiles()
 	if err != nil {
 		return err
 	}
 	d.p.N = n
 	// symlink
-	s, n, err := d.db.NSymlink()
+	s, n, err := d.db.NumSymlinks()
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (d *Deduper) All(ctx context.Context) error {
 
 func (d *Deduper) Files(ctx context.Context) error {
 	// file
-	done, n, err := d.db.NFile()
+	done, n, err := d.db.NumFiles()
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (d *Deduper) files(ctx context.Context) error {
 
 func (d *Deduper) Symlinks(ctx context.Context) error {
 	// symlink
-	done, n, err := d.db.NSymlink()
+	done, n, err := d.db.NumSymlinks()
 	if err != nil {
 		return err
 	}
