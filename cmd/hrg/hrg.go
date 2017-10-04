@@ -27,7 +27,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -53,8 +52,7 @@ func main() {
 		switch err.(type) {
 		case cli.FlagError:
 			os.Exit(2)
-		}
-		if err == context.Canceled {
+		case cli.Interrupt:
 			os.Exit(128 + 2)
 		}
 		os.Exit(1)
@@ -92,14 +90,11 @@ func dedup(ctx *cli.Context) error {
 		progress = terminal.IsTerminal(int(f.Fd()))
 	}
 
-	ctx_, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	go func() {
 		<-sig
-		cancel()
+		ctx.Interrupt()
 	}()
 
 	c := ctx.String("cache")
@@ -128,7 +123,7 @@ func dedup(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			if err := f.Walk(ctx_, p); err != nil {
+			if err := f.Walk(ctx.Context(), p); err != nil {
 				return err
 			}
 		}
@@ -171,5 +166,5 @@ func dedup(ctx *cli.Context) error {
 	d.Name = !ctx.Bool("name")
 	d.Pretend = ctx.Bool("pretend")
 	d.Progress = progress
-	return d.All(ctx_)
+	return d.All(ctx.Context())
 }
