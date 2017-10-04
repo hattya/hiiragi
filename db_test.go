@@ -111,6 +111,28 @@ func TestDBOpen(t *testing.T) {
 	}
 }
 
+func TestDBCacheSize(t *testing.T) {
+	dir, err := tempDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if err := db.SetCacheSize(2000 * 1024); err != nil {
+		t.Error(err)
+	}
+
+	if err := db.SetCacheSize(-2000); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestDBFiles(t *testing.T) {
 	dir, err := tempDir()
 	if err != nil {
