@@ -27,6 +27,7 @@
 package hiiragi_test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -129,7 +130,7 @@ func TestDBFiles(t *testing.T) {
 	}
 
 	test := func(db *hiiragi.DB, v int64) (err error) {
-		_, err = db.NextFiles(true, hiiragi.Asc)
+		_, err = db.NextFiles(context.Background(), true, hiiragi.Asc)
 		if err != nil {
 			return
 		}
@@ -220,7 +221,7 @@ func TestDBSymlinks(t *testing.T) {
 	}
 
 	test := func(db *hiiragi.DB, v int64) (err error) {
-		_, err = db.NextSymlinks(true, hiiragi.Asc)
+		_, err = db.NextSymlinks(context.Background(), true, hiiragi.Asc)
 		if err != nil {
 			return
 		}

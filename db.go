@@ -28,6 +28,7 @@ package hiiragi
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -136,17 +137,17 @@ func (db *DB) count(t string) (done, n int64, err error) {
 	return
 }
 
-func (db *DB) NextFiles(mtime bool, order Order) ([]*File, error) {
-	list, err := db.next(&File{}, mtime, order)
+func (db *DB) NextFiles(ctx context.Context, mtime bool, order Order) ([]*File, error) {
+	list, err := db.next(ctx, &File{}, mtime, order)
 	return list.([]*File), err
 }
 
-func (db *DB) NextSymlinks(mtime bool, order Order) ([]*Symlink, error) {
-	list, err := db.next(&Symlink{}, mtime, order)
+func (db *DB) NextSymlinks(ctx context.Context, mtime bool, order Order) ([]*Symlink, error) {
+	list, err := db.next(ctx, &Symlink{}, mtime, order)
 	return list.([]*Symlink), err
 }
 
-func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, err error) {
+func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) (list interface{}, err error) {
 	tt := reflect.Indirect(reflect.ValueOf(t)).Type()
 	col := tt.Field(tt.NumField() - 1).Name
 	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
@@ -194,7 +195,7 @@ func (db *DB) next(t interface{}, mtime bool, order Order) (list interface{}, er
 			return
 		}
 	}
-	rows, err := stmt.Query()
+	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
 		return
 	}

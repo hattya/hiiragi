@@ -115,7 +115,7 @@ func (d *Deduper) files(ctx context.Context) error {
 		default:
 		}
 
-		files, err := d.db.NextFiles(mtime, order)
+		files, err := d.db.NextFiles(ctx, mtime, order)
 		switch {
 		case err != nil || len(files) == 0:
 			return err
@@ -194,7 +194,7 @@ func (d *Deduper) symlinks(ctx context.Context) error {
 		default:
 		}
 
-		syms, err := d.db.NextSymlinks(mtime, order)
+		syms, err := d.db.NextSymlinks(ctx, mtime, order)
 		switch {
 		case err != nil || len(syms) == 0:
 			return err
