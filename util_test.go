@@ -86,7 +86,7 @@ func TestStat(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if e, g := hiiragi.SameAttrs(fi1, fi2), true; g != e {
+		if g, e := hiiragi.SameAttrs(fi1, fi2), true; g != e {
 			t.Errorf("expected %v, got %v", e, g)
 		}
 	}

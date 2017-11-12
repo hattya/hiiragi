@@ -138,12 +138,12 @@ func (db *DB) count(t string) (done, n int64, err error) {
 }
 
 func (db *DB) NextFiles(ctx context.Context, mtime bool, order Order) ([]*File, error) {
-	list, err := db.next(ctx, &File{}, mtime, order)
+	list, err := db.next(ctx, new(File), mtime, order)
 	return list.([]*File), err
 }
 
 func (db *DB) NextSymlinks(ctx context.Context, mtime bool, order Order) ([]*Symlink, error) {
-	list, err := db.next(ctx, &Symlink{}, mtime, order)
+	list, err := db.next(ctx, new(Symlink), mtime, order)
 	return list.([]*Symlink), err
 }
 
