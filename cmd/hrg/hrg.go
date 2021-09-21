@@ -17,12 +17,11 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/cloudfoundry/gosigar"
 	"github.com/hattya/go.cli"
 	"github.com/hattya/hiiragi"
 	"github.com/mattn/go-colorable"
+	"golang.org/x/term"
 )
 
 var app = cli.NewCLI()
@@ -69,7 +68,7 @@ func init() {
 func dedup(ctx *cli.Context) error {
 	progress := false
 	if f, ok := ctx.UI.Stdout.(*os.File); ok {
-		progress = terminal.IsTerminal(int(f.Fd()))
+		progress = term.IsTerminal(int(f.Fd()))
 	}
 
 	sig := make(chan os.Signal, 1)
