@@ -6,20 +6,20 @@
 //   SPDX-License-Identifier: MIT
 //
 
+//go:build !plan9 && !windows
 // +build !plan9,!windows
 
 package hiiragi_test
 
 import (
-	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
 
-func lutimesNano(path string, ts []syscall.Timespec) error {
-	ut := []unix.Timespec{
-		unix.Timespec(ts[0]),
-		unix.Timespec(ts[1]),
-	}
-	return unix.UtimesNanoAt(unix.AT_FDCWD, path, ut, unix.AT_SYMLINK_NOFOLLOW)
+func lutimes(name string, atime, mtime time.Time) error {
+	return unix.Lutimes(name, []unix.Timeval{
+		unix.NsecToTimeval(atime.UnixNano()),
+		unix.NsecToTimeval(mtime.UnixNano()),
+	})
 }

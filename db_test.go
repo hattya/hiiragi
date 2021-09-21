@@ -22,11 +22,7 @@ import (
 )
 
 func TestDBCreate(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	db, err := hiiragi.Create(":memory:")
 	if err != nil {
@@ -63,11 +59,7 @@ func TestDBCreate(t *testing.T) {
 }
 
 func TestDBOpen(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
@@ -94,13 +86,7 @@ func TestDBOpen(t *testing.T) {
 }
 
 func TestDBCacheSize(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
-	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
+	db, err := hiiragi.Create(filepath.Join(t.TempDir(), "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,12 +102,7 @@ func TestDBCacheSize(t *testing.T) {
 }
 
 func TestDBFiles(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -141,15 +122,14 @@ func TestDBFiles(t *testing.T) {
 		done, n, err := db.NumFiles()
 		if err != nil {
 			return
-		}
-		if g, e := n-done, v; g != e {
+		} else if g, e := n-done, v; g != e {
 			err = fmt.Errorf("expected count(file) = %v, got %v", e, g)
+			return
 		}
 		done, n, err = db.NumSymlinks()
 		if err != nil {
 			return
-		}
-		if g, e := n-done, int64(0); g != e {
+		} else if g, e := n-done, int64(0); g != e {
 			err = fmt.Errorf("expected count(symlink) = %v, got %v", e, g)
 		}
 		return
@@ -207,12 +187,7 @@ func TestDBSymlinks(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -232,15 +207,14 @@ func TestDBSymlinks(t *testing.T) {
 		done, n, err := db.NumSymlinks()
 		if err != nil {
 			return
-		}
-		if g, e := n-done, v; g != e {
+		} else if g, e := n-done, v; g != e {
 			err = fmt.Errorf("expected count(symlink) = %v, got %v", e, g)
+			return
 		}
 		done, n, err = db.NumFiles()
 		if err != nil {
 			return
-		}
-		if g, e := n-done, int64(0); g != e {
+		} else if g, e := n-done, int64(0); g != e {
 			err = fmt.Errorf("expected count(file) = %v, got %v", e, g)
 		}
 		return
@@ -304,12 +278,7 @@ func TestDBUpdate(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -329,8 +298,7 @@ func TestDBUpdate(t *testing.T) {
 		_, ns, err := db.NumSymlinks()
 		if err != nil {
 			return
-		}
-		if g, e := nf+ns, v; g != e {
+		} else if g, e := nf+ns, v; g != e {
 			err = fmt.Errorf("expected count(info) = %v, got %v", e, g)
 		}
 		return
@@ -391,19 +359,19 @@ func TestDBUpdate(t *testing.T) {
 	}
 }
 
-func count(db *hiiragi.DB, e int) error {
+func count(db *hiiragi.DB, e int) (err error) {
 	_, nf, err := db.NumFiles()
 	if err != nil {
-		return err
+		return
 	}
 	_, ns, err := db.NumSymlinks()
 	if err != nil {
-		return err
+		return
 	}
 	if g, e := nf+ns, int64(e); g != e {
-		return fmt.Errorf("expected count(info) = %v, got %v", e, g)
+		err = fmt.Errorf("expected count(info) = %v, got %v", e, g)
 	}
-	return nil
+	return
 }
 
 func update(db *hiiragi.DB, path string) error {
@@ -417,11 +385,10 @@ func update(db *hiiragi.DB, path string) error {
 var home string
 
 func init() {
-	switch runtime.GOOS {
-	case "windows":
-		home = `C:\Users\hiiragi`
-	default:
-		home = "/home/hiiragi"
+	var err error
+	home, err = os.UserHomeDir()
+	if err != nil {
+		panic(err)
 	}
 }
 

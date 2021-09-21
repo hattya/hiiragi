@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -21,12 +20,7 @@ import (
 )
 
 func TestFinder(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -64,12 +58,7 @@ func TestFinder(t *testing.T) {
 }
 
 func TestFinderInterrupt(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)

@@ -9,7 +9,6 @@
 package hiiragi_test
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -18,7 +17,7 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	var b bytes.Buffer
+	var b strings.Builder
 	ui := cli.NewCLI()
 	ui.Stdout = &b
 	ui.Stderr = &b

@@ -9,7 +9,6 @@
 package hiiragi_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,11 +16,7 @@ import (
 )
 
 func TestSum(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	// file
 	n := filepath.Join(dir, "1")
 	if err := touch(n); err != nil {
@@ -36,25 +31,18 @@ func TestSum(t *testing.T) {
 	}
 	// directory
 	n = dir
-	_, err = hiiragi.Sum(n)
-	if err == nil {
+	if _, err := hiiragi.Sum(n); err == nil {
 		t.Error("expected error")
 	}
 	// not exist
 	n = filepath.Join(dir, "2")
-	_, err = hiiragi.Sum(n)
-	if err == nil {
+	if _, err := hiiragi.Sum(n); err == nil {
 		t.Error("expected error")
 	}
 }
 
 func TestStat(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	f1 := filepath.Join(dir, "1")
 	if err := touch(f1); err != nil {
 		t.Fatal(err)
@@ -68,18 +56,16 @@ func TestStat(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if g, e := hiiragi.SameAttrs(fi1, fi2), true; g != e {
-			t.Errorf("expected %v, got %v", e, g)
+		if !hiiragi.SameAttrs(fi1, fi2) {
+			t.Error("expected true, got false")
 		}
 	}
 	// not exist
 	f2 := filepath.Join(dir, "2")
-	_, err = hiiragi.Stat(f2)
-	if err == nil {
+	if _, err := hiiragi.Stat(f2); err == nil {
 		t.Error("expected error")
 	}
-	_, err = hiiragi.Lstat(f2)
-	if err == nil {
+	if _, err := hiiragi.Lstat(f2); err == nil {
 		t.Error("expected error")
 	}
 }

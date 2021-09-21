@@ -10,12 +10,10 @@ package hiiragi_test
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"testing"
 	"time"
 
@@ -26,175 +24,166 @@ import (
 var supportsSymlinks = true
 
 func TestDedupAll(t *testing.T) {
-	dir, list, err := dedup("all", map[string]interface{}{})
-	defer os.RemoveAll(dir)
+	list, err := dedup(t, "all", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	files := list[:8]
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	syms := list[8:]
-	if 0 < len(syms) {
+	if len(syms) > 0 {
 		if sameFile(syms[0], syms[1]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if !sameFile(syms[0], syms[2]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if sameFile(syms[0], syms[4]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if !sameFile(syms[1], syms[3]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if sameFile(syms[1], syms[5]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 	}
 }
 
 func TestDedupAllPretend(t *testing.T) {
-	dir, list, err := dedup("all", map[string]interface{}{
+	list, err := dedup(t, "all", map[string]interface{}{
 		"pretend": true,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	files := list[:8]
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[2]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[3]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	syms := list[8:]
-	if 0 < len(syms) {
+	if len(syms) > 0 {
 		if sameFile(syms[0], syms[1]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if sameFile(syms[0], syms[2]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if sameFile(syms[0], syms[4]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if sameFile(syms[1], syms[3]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 		if sameFile(syms[1], syms[5]) {
-			t.Errorf("symlinks should be different")
+			t.Error("symlinks should be different")
 		}
 	}
 }
 
 func TestDedupAllIgnoreAll(t *testing.T) {
-	dir, list, err := dedup("all", map[string]interface{}{
+	list, err := dedup(t, "all", map[string]interface{}{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	files := list[:8]
 	if !sameFile(files[0], files[1]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[4]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[6]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[5]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[7]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	syms := list[8:]
-	if 0 < len(syms) {
+	if len(syms) > 0 {
 		if !sameFile(syms[0], syms[1]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if !sameFile(syms[0], syms[2]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if !sameFile(syms[0], syms[4]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if !sameFile(syms[1], syms[3]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 		if !sameFile(syms[1], syms[5]) {
-			t.Errorf("symlinks should be same")
+			t.Error("symlinks should be same")
 		}
 	}
 }
 
 func TestDedupAllInterrupt(t *testing.T) {
-	dir, _, err := dedup("all", map[string]interface{}{
+	_, err := dedup(t, "all", map[string]interface{}{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
 		t.Error(err)
 	}
-	os.RemoveAll(dir)
 }
 
 func TestDedupNoFiles(t *testing.T) {
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -208,12 +197,12 @@ func TestDedupNoFiles(t *testing.T) {
 	var files []string
 	now := time.Now().Truncate(time.Second)
 	ts := now.Add(-3 * time.Second)
-	for i := 1; i < 4; i++ {
-		n := filepath.Join(root, fmt.Sprintf("%v", i))
+	for i := rune('1'); i < '4'; i++ {
+		n := filepath.Join(root, string(i))
 		if err := touch(n); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chtimes(n, ts, ts); err != nil {
+		if err := lutimes(n, ts, ts); err != nil {
 			t.Fatal(err)
 		}
 		files = append(files, n)
@@ -237,15 +226,15 @@ func TestDedupNoFiles(t *testing.T) {
 	}
 	// update mtime
 	ts = now.Add(-3 * time.Second)
-	if err := os.Chtimes(files[1], ts, ts); err != nil {
+	if err := lutimes(files[1], ts, ts); err != nil {
 		t.Fatal(err)
 	}
 	// change data
 	ts = now
-	if err := ioutil.WriteFile(files[2], []byte("data\n"), 0666); err != nil {
+	if err := file(files[2], "data\n"); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chtimes(files[2], ts, ts); err != nil {
+	if err := lutimes(files[2], ts, ts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -254,216 +243,209 @@ func TestDedupNoFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[2]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[2]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 }
 
 func TestDedupFiles(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{})
-	defer os.RemoveAll(dir)
+	files, err := dedup(t, "files", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 }
 
 func TestDedupFilesIgnoreAll(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]interface{}{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !sameFile(files[0], files[1]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[4]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[6]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[5]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[7]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 }
 
 func TestDedupFilesIgnoreAttrs(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]interface{}{
 		"attrs": false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[0], files[6]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[1], files[7]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 }
 
 func TestDedupFilesIgnoreMtime(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]interface{}{
 		"mtime": hiiragi.Oldest,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[4]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[1], files[5]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 }
 
 func TestDedupFilesIgnoreName(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]interface{}{
 		"name": false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !sameFile(files[0], files[1]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if !sameFile(files[0], files[2]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if !sameFile(files[1], files[3]) {
-		t.Errorf("files should be same")
+		t.Error("files should be same")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 }
 
 func TestDedupFilesPretend(t *testing.T) {
-	dir, files, err := dedup("files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]interface{}{
 		"pretend": true,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if sameFile(files[0], files[1]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[2]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[4]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[0], files[6]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[3]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[5]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 	if sameFile(files[1], files[7]) {
-		t.Errorf("files should be different")
+		t.Error("files should be different")
 	}
 }
 
 func TestDedupFilesInterrupt(t *testing.T) {
-	dir, _, err := dedup("files", map[string]interface{}{
+	_, err := dedup(t, "files", map[string]interface{}{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
 		t.Error(err)
 	}
-	os.RemoveAll(dir)
 }
 
 func TestDedupNoSymlinks(t *testing.T) {
@@ -471,12 +453,7 @@ func TestDedupNoSymlinks(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, err := tempDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	db, err := hiiragi.Create(filepath.Join(dir, "hiiragi.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -494,12 +471,12 @@ func TestDedupNoSymlinks(t *testing.T) {
 	var syms []string
 	now := time.Now().Truncate(time.Second)
 	ts := now.Add(-3 * time.Second)
-	for i := 1; i < 4; i++ {
-		n := filepath.Join(root, fmt.Sprintf("%v", i))
+	for i := rune('1'); i < '4'; i++ {
+		n := filepath.Join(root, string(i))
 		if err := os.Symlink(tgt, n); err != nil {
 			t.Fatal(err)
 		}
-		if err := lchtimes(n, ts, ts); err != nil {
+		if err := lutimes(n, ts, ts); err != nil {
 			t.Fatal(err)
 		}
 		syms = append(syms, n)
@@ -523,7 +500,7 @@ func TestDedupNoSymlinks(t *testing.T) {
 	}
 	// update mtime
 	ts = now.Add(-3 * time.Second)
-	if err := lchtimes(syms[1], ts, ts); err != nil {
+	if err := lutimes(syms[1], ts, ts); err != nil {
 		t.Fatal(err)
 	}
 	// change link target
@@ -538,7 +515,7 @@ func TestDedupNoSymlinks(t *testing.T) {
 	if err := os.Symlink(tgt, syms[2]); err != nil {
 		t.Fatal(err)
 	}
-	if err := lchtimes(syms[2], ts, ts); err != nil {
+	if err := lutimes(syms[2], ts, ts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -547,13 +524,13 @@ func TestDedupNoSymlinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sameFile(syms[0], syms[1]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[0], syms[2]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[1], syms[2]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 }
 
@@ -562,25 +539,24 @@ func TestDedupSymlinks(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, syms, err := dedup("symlinks", map[string]interface{}{})
-	defer os.RemoveAll(dir)
+	syms, err := dedup(t, "symlinks", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sameFile(syms[0], syms[1]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if !sameFile(syms[0], syms[2]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if sameFile(syms[0], syms[4]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if !sameFile(syms[1], syms[3]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if sameFile(syms[1], syms[5]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 }
 
@@ -589,29 +565,28 @@ func TestDedupSymlinksIgnoreAll(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, syms, err := dedup("symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]interface{}{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !sameFile(syms[0], syms[1]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if !sameFile(syms[0], syms[2]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if !sameFile(syms[0], syms[4]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if !sameFile(syms[1], syms[3]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if !sameFile(syms[1], syms[5]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 }
 
@@ -620,27 +595,26 @@ func TestDedupSymlinksIgnoreName(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, syms, err := dedup("symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]interface{}{
 		"name": false,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !sameFile(syms[0], syms[1]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if !sameFile(syms[0], syms[2]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if sameFile(syms[0], syms[4]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if !sameFile(syms[1], syms[3]) {
-		t.Errorf("symlinks should be same")
+		t.Error("symlinks should be same")
 	}
 	if sameFile(syms[1], syms[5]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 }
 
@@ -649,27 +623,26 @@ func TestDedupSymlinksPretend(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, syms, err := dedup("symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]interface{}{
 		"pretend": true,
 	})
-	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sameFile(syms[0], syms[1]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[0], syms[2]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[0], syms[4]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[1], syms[3]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 	if sameFile(syms[1], syms[5]) {
-		t.Errorf("symlinks should be different")
+		t.Error("symlinks should be different")
 	}
 }
 
@@ -678,20 +651,16 @@ func TestDedupSymlinksInterrupt(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	dir, _, err := dedup("symlinks", map[string]interface{}{
+	_, err := dedup(t, "symlinks", map[string]interface{}{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
 		t.Error(err)
 	}
-	os.RemoveAll(dir)
 }
 
-func dedup(action string, opts map[string]interface{}) (dir string, list []string, err error) {
-	dir, err = tempDir()
-	if err != nil {
-		return
-	}
+func dedup(t *testing.T, action string, opts map[string]interface{}) (list []string, err error) {
+	dir := t.TempDir()
 	root := filepath.Join(dir, "root")
 	switch action {
 	case "all":
@@ -786,12 +755,12 @@ func createFiles(root string) (files []string, err error) {
 		if err = mkdir(dir); err != nil {
 			return
 		}
-		for i := 1; i < 3; i++ {
-			n := filepath.Join(dir, string('0'+i))
+		for i := rune('1'); i < '3'; i++ {
+			n := filepath.Join(dir, string(i))
 			if err = touch(n); err != nil {
 				return
 			}
-			if err = os.Chtimes(n, now, now); err != nil {
+			if err = lutimes(n, now, now); err != nil {
 				return
 			}
 			files = append(files, n)
@@ -799,14 +768,14 @@ func createFiles(root string) (files []string, err error) {
 	}
 
 	ts := now.Add(3 * time.Second)
-	for i := 1; i < 3; i++ {
-		n := filepath.Join(root, "b", string('0'+i))
-		if err = os.Chtimes(n, ts, ts); err != nil {
+	for i := rune('1'); i < '3'; i++ {
+		n := filepath.Join(root, "b", string(i))
+		if err = lutimes(n, ts, ts); err != nil {
 			return
 		}
 
-		n = filepath.Join(root, "c", string('0'+i))
-		if err = os.Chmod(n, 0444); err != nil {
+		n = filepath.Join(root, "c", string(i))
+		if err = os.Chmod(n, 0o444); err != nil {
 			return
 		}
 	}
@@ -835,12 +804,12 @@ func createSymlinks(path, root string) (syms []string, err error) {
 		if err = mkdir(dir); err != nil {
 			return
 		}
-		for i := 1; i < 3; i++ {
-			n := filepath.Join(dir, string('0'+i))
+		for i := rune('1'); i < '3'; i++ {
+			n := filepath.Join(dir, string(i))
 			if err = os.Symlink(tgt, n); err != nil {
 				return
 			}
-			if err = lchtimes(n, now, now); err != nil {
+			if err = lutimes(n, now, now); err != nil {
 				return
 			}
 			syms = append(syms, n)
@@ -848,9 +817,9 @@ func createSymlinks(path, root string) (syms []string, err error) {
 	}
 
 	ts := now.Add(3 * time.Second)
-	for i := 1; i < 3; i++ {
-		n := filepath.Join(root, "b", string('0'+i))
-		if err = lchtimes(n, ts, ts); err != nil {
+	for i := rune('1'); i < '3'; i++ {
+		n := filepath.Join(root, "b", string(i))
+		if err = lutimes(n, ts, ts); err != nil {
 			return
 		}
 	}
@@ -858,22 +827,7 @@ func createSymlinks(path, root string) (syms []string, err error) {
 }
 
 func mkdir(path string) error {
-	return os.MkdirAll(path, 0777)
-}
-
-func lchtimes(name string, atime time.Time, mtime time.Time) error {
-	ts := []syscall.Timespec{
-		syscall.NsecToTimespec(atime.UnixNano()),
-		syscall.NsecToTimespec(mtime.UnixNano()),
-	}
-	if err := lutimesNano(name, ts); err != nil {
-		return &os.PathError{
-			Op:   "lchtimes",
-			Path: name,
-			Err:  err,
-		}
-	}
-	return nil
+	return os.MkdirAll(path, 0o777)
 }
 
 func sameFile(a, b string) bool {
@@ -888,12 +842,12 @@ func sameFile(a, b string) bool {
 	return hiiragi.SameFile(fi1, fi2)
 }
 
-func tempDir() (string, error) {
-	return ioutil.TempDir("", "hiiragi.test")
+func file(name, data string) error {
+	return ioutil.WriteFile(name, []byte(data), 0o666)
 }
 
 func touch(name string) error {
-	return ioutil.WriteFile(name, []byte{}, 0666)
+	return ioutil.WriteFile(name, []byte{}, 0o666)
 }
 
 var whenTests = []struct {

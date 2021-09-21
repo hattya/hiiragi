@@ -9,15 +9,17 @@
 package hiiragi_test
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/windows"
 )
 
 func init() {
-	dir, err := tempDir()
+	dir, err := ioutil.TempDir("", "hiiragi.test")
 	if err != nil {
 		panic(err)
 	}
@@ -31,18 +33,17 @@ func init() {
 	}
 }
 
-func lutimesNano(path string, ts []syscall.Timespec) error {
-	p, err := windows.UTF16PtrFromString(path)
+func lutimes(name string, atime, mtime time.Time) error {
+	p, err := windows.UTF16PtrFromString(name)
 	if err != nil {
 		return err
 	}
-	h, err := windows.CreateFile(p, windows.GENERIC_WRITE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	h, err := windows.CreateFile(p, windows.FILE_WRITE_ATTRIBUTES, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		return err
 	}
 	defer windows.CloseHandle(h)
-
-	a := windows.NsecToFiletime(windows.TimespecToNsec(windows.Timespec(ts[0])))
-	w := windows.NsecToFiletime(windows.TimespecToNsec(windows.Timespec(ts[1])))
+	a := windows.NsecToFiletime(atime.UnixNano())
+	w := windows.NsecToFiletime(mtime.UnixNano())
 	return windows.SetFileTime(h, nil, &a, &w)
 }
