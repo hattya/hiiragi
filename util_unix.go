@@ -14,7 +14,13 @@ package hiiragi
 import (
 	"os"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
+
+func Link(oldname, newname string) error {
+	return unix.Linkat(unix.AT_FDCWD, oldname, unix.AT_FDCWD, newname, 0)
+}
 
 func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	sys1 := fi1.Sys().(*syscall.Stat_t)

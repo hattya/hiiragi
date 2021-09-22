@@ -14,6 +14,10 @@ import (
 	"syscall"
 )
 
+func Link(oldname, newname string) error {
+	return os.Link(oldname, newname)
+}
+
 func SameAttrs(fi1, fi2 FileInfoEx) bool {
 	fs1, ok1 := fi1.(*fileStatEx)
 	fs2, ok2 := fi2.(*fileStatEx)

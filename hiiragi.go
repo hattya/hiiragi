@@ -292,7 +292,7 @@ func (d *Deduper) link(src, dst string) (err error) {
 		if err = os.Rename(dst, tmp); err != nil {
 			return
 		}
-		if err = os.Link(src, dst); err != nil {
+		if err = Link(src, dst); err != nil {
 			return
 		}
 		err = os.Remove(tmp)
