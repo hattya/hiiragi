@@ -80,9 +80,9 @@ func (c *counter) Update(i int64) {
 
 func (c *counter) render() {
 	if c.N > 0 {
-		c.ui.Printf("%s: %v / %v", c.label, c.pos, c.N)
+		c.ui.Printf("%v: %v / %v", c.label, c.pos, c.N)
 	} else {
-		c.ui.Printf("%s: %v", c.label, c.pos)
+		c.ui.Printf("%v: %v", c.label, c.pos)
 	}
 	c.bol = false
 }

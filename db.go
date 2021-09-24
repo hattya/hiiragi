@@ -352,7 +352,7 @@ func (db *DB) upsert(insert, update string, a ...interface{}) (err error) {
 	}
 	n, err := res.RowsAffected()
 	if err == nil && n < 1 {
-		res, err = s.stmt[insert].Exec(a...)
+		_, err = s.stmt[insert].Exec(a...)
 	}
 	return
 }
