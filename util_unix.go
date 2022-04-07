@@ -1,7 +1,7 @@
 //
 // hiiragi :: util_unix.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -12,6 +12,7 @@
 package hiiragi
 
 import (
+	"io/fs"
 	"os"
 	"syscall"
 
@@ -38,7 +39,7 @@ func SameFile(fi1, fi2 FileInfoEx) bool {
 }
 
 type fileStatEx struct {
-	os.FileInfo
+	fs.FileInfo
 
 	path string
 }

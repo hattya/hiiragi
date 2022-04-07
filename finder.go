@@ -1,7 +1,7 @@
 //
 // hiiragi :: finder.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -10,6 +10,7 @@ package hiiragi
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -46,7 +47,7 @@ func (f *Finder) Walk(ctx context.Context, root string) error {
 	defer f.db.Rollback()
 
 	f.p.Show = f.Progress
-	err := filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
+	err := filepath.WalkDir(root, func(path string, de fs.DirEntry, err error) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -56,9 +57,13 @@ func (f *Finder) Walk(ctx context.Context, root string) error {
 		switch {
 		case err != nil:
 			f.error(err)
-		case fi.Mode()&(os.ModeType^os.ModeSymlink) == 0:
+		case de.Type()&^fs.ModeSymlink == 0:
+			info, err := de.Info()
+			if err != nil {
+				return err
+			}
 			fi := &fileStatEx{
-				FileInfo: fi,
+				FileInfo: info,
 				path:     path,
 			}
 			if err := f.db.Update(fi); err != nil {

@@ -1,7 +1,7 @@
 //
 // hiiragi :: util.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -13,6 +13,7 @@ import (
 	_ "crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/fs"
 	"os"
 	"time"
 )
@@ -38,7 +39,7 @@ func Sum(name string) (hash string, err error) {
 }
 
 type FileInfoEx interface {
-	os.FileInfo
+	fs.FileInfo
 
 	Path() string
 	Dev() (uint64, error)
