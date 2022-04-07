@@ -12,7 +12,7 @@ are under the specified directory.
 ## Installation
 
 ```console
-$ go get -u github.com/hattya/hiiragi/cmd/hrg
+$ go install github.com/hattya/hiiragi/cmd/hrg@latest
 ```
 
 

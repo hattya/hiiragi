@@ -1,7 +1,7 @@
 //
 // hiiragi/cmd/hrg :: hrg.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -11,7 +11,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -122,7 +121,7 @@ func dedup(ctx *cli.Context) error {
 			return err
 		}
 		defer f.Close()
-		t, err := ioutil.TempFile("", "hiiragi")
+		t, err := os.CreateTemp("", "hiiragi")
 		if err != nil {
 			return err
 		}

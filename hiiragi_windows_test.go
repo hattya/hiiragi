@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_windows_test.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -9,7 +9,6 @@
 package hiiragi_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -19,7 +18,7 @@ import (
 )
 
 func init() {
-	dir, err := ioutil.TempDir("", "hiiragi.test")
+	dir, err := os.MkdirTemp("", "hiiragi.test")
 	if err != nil {
 		panic(err)
 	}

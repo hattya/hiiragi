@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_test.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -10,7 +10,7 @@ package hiiragi_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -210,8 +210,8 @@ func TestDedupNoFiles(t *testing.T) {
 	}
 
 	ui := cli.NewCLI()
-	ui.Stdout = ioutil.Discard
-	ui.Stderr = ioutil.Discard
+	ui.Stdout = io.Discard
+	ui.Stderr = io.Discard
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -484,8 +484,8 @@ func TestDedupNoSymlinks(t *testing.T) {
 	}
 
 	ui := cli.NewCLI()
-	ui.Stdout = ioutil.Discard
-	ui.Stderr = ioutil.Discard
+	ui.Stdout = io.Discard
+	ui.Stderr = io.Discard
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -691,8 +691,8 @@ func dedup(t *testing.T, action string, opts map[string]interface{}) (list []str
 	}
 
 	ui := cli.NewCLI()
-	ui.Stdout = ioutil.Discard
-	ui.Stderr = ioutil.Discard
+	ui.Stdout = io.Discard
+	ui.Stderr = io.Discard
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -843,11 +843,11 @@ func sameFile(a, b string) bool {
 }
 
 func file(name, data string) error {
-	return ioutil.WriteFile(name, []byte(data), 0o666)
+	return os.WriteFile(name, []byte(data), 0o666)
 }
 
 func touch(name string) error {
-	return ioutil.WriteFile(name, []byte{}, 0o666)
+	return os.WriteFile(name, []byte{}, 0o666)
 }
 
 var whenTests = []struct {

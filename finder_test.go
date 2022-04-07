@@ -1,7 +1,7 @@
 //
 // hiiragi :: finder_test.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -11,7 +11,7 @@ package hiiragi_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -38,8 +38,8 @@ func TestFinder(t *testing.T) {
 	}
 
 	ui := cli.NewCLI()
-	ui.Stdout = ioutil.Discard
-	ui.Stderr = ioutil.Discard
+	ui.Stdout = io.Discard
+	ui.Stderr = io.Discard
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -76,8 +76,8 @@ func TestFinderInterrupt(t *testing.T) {
 	}
 
 	ui := cli.NewCLI()
-	ui.Stdout = ioutil.Discard
-	ui.Stderr = ioutil.Discard
+	ui.Stdout = io.Discard
+	ui.Stderr = io.Discard
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
