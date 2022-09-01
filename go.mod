@@ -3,15 +3,15 @@ module github.com/hattya/hiiragi
 go 1.17
 
 require (
-	github.com/cloudfoundry/gosigar v1.3.3
-	github.com/hattya/go.cli v0.0.0-20220328120704-5245e45808f2
-	github.com/mattn/go-colorable v0.1.12
-	github.com/mattn/go-sqlite3 v1.14.12
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
+	github.com/cloudfoundry/gosigar v1.3.4
+	github.com/hattya/go.cli v0.0.0-20220820004708-c913fccaa66d
+	github.com/mattn/go-colorable v0.1.13
+	github.com/mattn/go-sqlite3 v1.14.15
+	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6
+	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035
 )
 
 require (
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 )
