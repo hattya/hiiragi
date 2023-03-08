@@ -1,6 +1,6 @@
 module github.com/hattya/hiiragi
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cloudfoundry/gosigar v1.3.4

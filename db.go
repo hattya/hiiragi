@@ -1,7 +1,7 @@
 //
 // hiiragi :: db.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2023 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -132,7 +132,7 @@ func (db *DB) NextSymlinks(ctx context.Context, mtime bool, order Order) ([]*Sym
 func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) (list interface{}, err error) {
 	tt := reflect.Indirect(reflect.ValueOf(t)).Type()
 	col := tt.Field(tt.NumField() - 1).Name
-	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
+	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(tt)), 0, 0)
 	list = lv.Interface() // make type assertion simple
 
 	k := "next." + tt.Name()
@@ -183,7 +183,7 @@ func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) 
 	}
 	defer rows.Close()
 
-	lv = reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(tt)), 0, 0)
+	lv = reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(tt)), 0, 0)
 	for rows.Next() {
 		v := reflect.New(tt).Elem()
 		dst := make([]interface{}, tt.NumField())
