@@ -1,13 +1,12 @@
 //
 // hiiragi :: hiiragi_unix_test.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2023 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
 
-//go:build !plan9 && !windows
-// +build !plan9,!windows
+//go:build unix
 
 package hiiragi_test
 
