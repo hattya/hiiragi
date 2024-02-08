@@ -1,7 +1,7 @@
 //
 // hiiragi/cmd/hrg :: hrg.go
 //
-//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2024 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -129,7 +129,7 @@ func dedup(ctx *cli.Context) error {
 		if _, err := io.Copy(t, f); err != nil {
 			return err
 		}
-		// dedup with temprary
+		// dedup with temporary
 		db, err = hiiragi.Open(t.Name())
 		if err != nil {
 			return err
