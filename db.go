@@ -1,7 +1,7 @@
 //
 // hiiragi :: db.go
 //
-//   Copyright (c) 2016-2023 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2024 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -433,11 +433,11 @@ func sortEntries(list interface{}, order Order) interface{} {
 	sort.Slice(s, func(i, j int) bool {
 		a := s[i]
 		b := s[j]
-		if !a.Mtime.Equal(b.Mtime) {
+		if cmp := a.Mtime.Compare(b.Mtime); cmp != 0 {
 			if order == Desc {
-				return a.Mtime.After(b.Mtime)
+				return cmp > 0
 			}
-			return a.Mtime.Before(b.Mtime)
+			return cmp < 0
 		}
 		if a.Nlink != b.Nlink {
 			return a.Nlink > b.Nlink
