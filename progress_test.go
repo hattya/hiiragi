@@ -1,7 +1,7 @@
 //
 // hiiragi :: progress_test.go
 //
-//   Copyright (c) 2016-2021 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2025 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -25,7 +25,7 @@ func TestCounter(t *testing.T) {
 	b.Reset()
 	c := hiiragi.NewCounter(ui, "test")
 	c.N = 8
-	for i := int64(0); i < c.N; i++ {
+	for range c.N {
 		c.Update(1)
 	}
 	c.Close()
@@ -37,7 +37,7 @@ func TestCounter(t *testing.T) {
 	c = hiiragi.NewCounter(ui, "test")
 	c.N = 8
 	c.Show = false
-	for i := int64(0); i < c.N; i++ {
+	for range c.N {
 		c.Update(1)
 	}
 	c.Close()
@@ -48,7 +48,7 @@ func TestCounter(t *testing.T) {
 	b.Reset()
 	c = hiiragi.NewCounter(ui, "test")
 	c.Show = false
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		c.Update(1)
 	}
 	c.Close()

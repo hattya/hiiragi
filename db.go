@@ -1,7 +1,7 @@
 //
 // hiiragi :: db.go
 //
-//   Copyright (c) 2016-2024 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2025 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -187,7 +187,7 @@ func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) 
 	for rows.Next() {
 		v := reflect.New(tt).Elem()
 		dst := make([]interface{}, tt.NumField())
-		for i := 0; i < tt.NumField(); i++ {
+		for i := range tt.NumField() {
 			dst[i] = v.Field(i).Addr().Interface()
 		}
 		if err = rows.Scan(dst...); err != nil {
@@ -407,7 +407,7 @@ func sortEntries(list interface{}, order Order) interface{} {
 	lv := reflect.ValueOf(list)
 	n := lv.Len()
 	s := make([]*entry, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		v := lv.Index(i).Elem()
 		path := v.FieldByName("Path").Interface().(string)
 		vol := filepath.VolumeName(path)
