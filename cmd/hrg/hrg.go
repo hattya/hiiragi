@@ -1,7 +1,7 @@
 //
 // hiiragi/cmd/hrg :: hrg.go
 //
-//   Copyright (c) 2016-2024 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2025 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -50,7 +50,7 @@ func init() {
 	app.Desc = "Create hard links for duplicate files that are under the specified directory."
 	app.Flags.Bool("a, attrs", false, "ignore file attributes")
 	app.Flags.String("c, cache", "hiiragi.db", "cache file (default: %q)")
-	app.Flags.PrefixChoice("m, mtime", hiiragi.When(0), map[string]interface{}{
+	app.Flags.PrefixChoice("m, mtime", hiiragi.When(0), map[string]any{
 		"oldest": hiiragi.Oldest,
 		"latest": hiiragi.Latest,
 	}, `ignore mtime. <when> is either "oldest" or "latest"`)

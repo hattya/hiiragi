@@ -129,7 +129,7 @@ func (db *DB) NextSymlinks(ctx context.Context, mtime bool, order Order) ([]*Sym
 	return list.([]*Symlink), err
 }
 
-func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) (list interface{}, err error) {
+func (db *DB) next(ctx context.Context, t any, mtime bool, order Order) (list any, err error) {
 	tt := reflect.Indirect(reflect.ValueOf(t)).Type()
 	col := tt.Field(tt.NumField() - 1).Name
 	lv := reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(tt)), 0, 0)
@@ -186,7 +186,7 @@ func (db *DB) next(ctx context.Context, t interface{}, mtime bool, order Order) 
 	lv = reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(tt)), 0, 0)
 	for rows.Next() {
 		v := reflect.New(tt).Elem()
-		dst := make([]interface{}, tt.NumField())
+		dst := make([]any, tt.NumField())
 		for i := range tt.NumField() {
 			dst[i] = v.Field(i).Addr().Interface()
 		}
@@ -286,7 +286,7 @@ func (db *DB) Update(fi FileInfoEx) error {
 		}
 
 		var t, col string
-		a := make([]interface{}, 2)
+		a := make([]any, 2)
 		a[1] = fi.Path()
 		if fi.Mode()&os.ModeType == 0 {
 			// file
@@ -344,7 +344,7 @@ func (db *DB) scope() *scope {
 	return db.stack[n]
 }
 
-func (db *DB) upsert(insert, update string, a ...interface{}) (err error) {
+func (db *DB) upsert(insert, update string, a ...any) (err error) {
 	s := db.scope()
 	res, err := s.stmt[update].Exec(a...)
 	if err != nil {
@@ -403,7 +403,7 @@ type Symlink struct {
 	Target string
 }
 
-func sortEntries(list interface{}, order Order) interface{} {
+func sortEntries(list any, order Order) any {
 	lv := reflect.ValueOf(list)
 	n := lv.Len()
 	s := make([]*entry, n)
@@ -459,7 +459,7 @@ type entry struct {
 	Path  []string
 	Nlink uint64
 	Mtime time.Time
-	Data  interface{}
+	Data  any
 }
 
 type Order uint
@@ -523,7 +523,7 @@ func init() {
 		{"info_id", "target"},
 	}
 
-	for _, a := range [][]interface{}{
+	for _, a := range [][]any{
 		{"file", "symlink"},
 		{"symlink", "file"},
 	} {

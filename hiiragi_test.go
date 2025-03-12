@@ -1,7 +1,7 @@
 //
 // hiiragi :: hiiragi_test.go
 //
-//   Copyright (c) 2016-2022 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2025 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -24,7 +24,7 @@ import (
 var supportsSymlinks = true
 
 func TestDedupAll(t *testing.T) {
-	list, err := dedup(t, "all", map[string]interface{}{})
+	list, err := dedup(t, "all", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestDedupAll(t *testing.T) {
 }
 
 func TestDedupAllPretend(t *testing.T) {
-	list, err := dedup(t, "all", map[string]interface{}{
+	list, err := dedup(t, "all", map[string]any{
 		"pretend": true,
 	})
 	if err != nil {
@@ -122,7 +122,7 @@ func TestDedupAllPretend(t *testing.T) {
 }
 
 func TestDedupAllIgnoreAll(t *testing.T) {
-	list, err := dedup(t, "all", map[string]interface{}{
+	list, err := dedup(t, "all", map[string]any{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
@@ -174,7 +174,7 @@ func TestDedupAllIgnoreAll(t *testing.T) {
 }
 
 func TestDedupAllInterrupt(t *testing.T) {
-	_, err := dedup(t, "all", map[string]interface{}{
+	_, err := dedup(t, "all", map[string]any{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
@@ -254,7 +254,7 @@ func TestDedupNoFiles(t *testing.T) {
 }
 
 func TestDedupFiles(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{})
+	files, err := dedup(t, "files", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +283,7 @@ func TestDedupFiles(t *testing.T) {
 }
 
 func TestDedupFilesIgnoreAll(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]any{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
@@ -316,7 +316,7 @@ func TestDedupFilesIgnoreAll(t *testing.T) {
 }
 
 func TestDedupFilesIgnoreAttrs(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]any{
 		"attrs": false,
 	})
 	if err != nil {
@@ -347,7 +347,7 @@ func TestDedupFilesIgnoreAttrs(t *testing.T) {
 }
 
 func TestDedupFilesIgnoreMtime(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]any{
 		"mtime": hiiragi.Oldest,
 	})
 	if err != nil {
@@ -378,7 +378,7 @@ func TestDedupFilesIgnoreMtime(t *testing.T) {
 }
 
 func TestDedupFilesIgnoreName(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]any{
 		"name": false,
 	})
 	if err != nil {
@@ -409,7 +409,7 @@ func TestDedupFilesIgnoreName(t *testing.T) {
 }
 
 func TestDedupFilesPretend(t *testing.T) {
-	files, err := dedup(t, "files", map[string]interface{}{
+	files, err := dedup(t, "files", map[string]any{
 		"pretend": true,
 	})
 	if err != nil {
@@ -440,7 +440,7 @@ func TestDedupFilesPretend(t *testing.T) {
 }
 
 func TestDedupFilesInterrupt(t *testing.T) {
-	_, err := dedup(t, "files", map[string]interface{}{
+	_, err := dedup(t, "files", map[string]any{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
@@ -539,7 +539,7 @@ func TestDedupSymlinks(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	syms, err := dedup(t, "symlinks", map[string]interface{}{})
+	syms, err := dedup(t, "symlinks", map[string]any{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -565,7 +565,7 @@ func TestDedupSymlinksIgnoreAll(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	syms, err := dedup(t, "symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]any{
 		"attrs": false,
 		"mtime": hiiragi.Oldest,
 		"name":  false,
@@ -595,7 +595,7 @@ func TestDedupSymlinksIgnoreName(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	syms, err := dedup(t, "symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]any{
 		"name": false,
 	})
 	if err != nil {
@@ -623,7 +623,7 @@ func TestDedupSymlinksPretend(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	syms, err := dedup(t, "symlinks", map[string]interface{}{
+	syms, err := dedup(t, "symlinks", map[string]any{
 		"pretend": true,
 	})
 	if err != nil {
@@ -651,7 +651,7 @@ func TestDedupSymlinksInterrupt(t *testing.T) {
 		t.Skipf("skipping on %v", runtime.GOOS)
 	}
 
-	_, err := dedup(t, "symlinks", map[string]interface{}{
+	_, err := dedup(t, "symlinks", map[string]any{
 		"interrupt": true,
 	})
 	if err != context.Canceled {
@@ -659,7 +659,7 @@ func TestDedupSymlinksInterrupt(t *testing.T) {
 	}
 }
 
-func dedup(t *testing.T, action string, opts map[string]interface{}) (list []string, err error) {
+func dedup(t *testing.T, action string, opts map[string]any) (list []string, err error) {
 	dir := t.TempDir()
 	root := filepath.Join(dir, "root")
 	switch action {
