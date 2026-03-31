@@ -1,7 +1,7 @@
 //
 // hiiragi/cmd/hrg :: hrg.go
 //
-//   Copyright (c) 2016-2025 Akinori Hattori <hattya@gmail.com>
+//   Copyright (c) 2016-2026 Akinori Hattori <hattya@gmail.com>
 //
 //   SPDX-License-Identifier: MIT
 //
@@ -16,9 +16,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/cloudfoundry/gosigar"
 	"github.com/hattya/go.cli"
 	"github.com/hattya/hiiragi"
+	"github.com/mackerelio/go-osstat/memory"
 	"github.com/mattn/go-colorable"
 	"golang.org/x/term"
 )
@@ -40,8 +40,8 @@ func main() {
 }
 
 func init() {
-	mem := sigar.Mem{}
-	if err := mem.Get(); err != nil {
+	mem, err := memory.Get()
+	if err != nil {
 		panic(err)
 	}
 
