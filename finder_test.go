@@ -41,8 +41,7 @@ func TestFinder(t *testing.T) {
 	ui.Stdout = io.Discard
 	ui.Stderr = io.Discard
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	f := hiiragi.NewFinder(ui, db)
 	if err := f.Walk(ctx, root); err != nil {
